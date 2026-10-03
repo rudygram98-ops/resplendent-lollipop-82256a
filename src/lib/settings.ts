@@ -7,9 +7,22 @@ export interface MemberSettings {
   messagePolicy: MessagePolicy
   hiddenWords: string[]
   screenTimeMinutes: number
+  isPrivate: boolean
+  reviewTags: boolean
+  allowDownloads: boolean
+  allowRemixes: boolean
+  quietMode: boolean
+  quietStart: number
+  quietEnd: number
+  timeZone: string
 }
 
-export async function settingsRequest(options?: RequestInit): Promise<MemberSettings> {
+export interface SettingsResponse extends MemberSettings {
+  quietNow: boolean
+  pendingRequests: number
+}
+
+export async function settingsRequest(options?: RequestInit): Promise<SettingsResponse> {
   const response = await fetch('/api/settings', { ...options, credentials: 'same-origin' })
   const data = await response.json().catch(() => null)
   if (!response.ok) {
@@ -17,7 +30,20 @@ export async function settingsRequest(options?: RequestInit): Promise<MemberSett
     if (response.status === 429) throw new Error('A little too fast. Wait a minute and try again.')
     throw new Error(data?.error || 'Settings are temporarily unavailable. Please try again.')
   }
-  return data as MemberSettings
+  return data as SettingsResponse
+}
+
+export function minutesToTime(minutes: number) {
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+}
+
+export function timeToMinutes(value: string) {
+  const [hours, minutes] = value.split(':').map(Number)
+  return Number.isInteger(hours) && Number.isInteger(minutes) ? hours * 60 + minutes : null
+}
+
+export function browserTimeZone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } catch { return 'UTC' }
 }
 
 export function parseHiddenWords(value: string) {

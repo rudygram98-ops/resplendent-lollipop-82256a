@@ -1,4 +1,17 @@
-export type FeedView = 'all' | 'photos' | 'clips' | 'saved' | 'mine'
+export type FeedView = 'all' | 'photos' | 'clips' | 'saved' | 'mine' | 'tagged'
+
+export interface TaggedMember {
+  id: string
+  name: string
+}
+
+export interface RemixSource {
+  id: string
+  authorName: string
+  content: string
+  mediaType: string | null
+  createdAt: string
+}
 
 export interface SocialPost {
   id: string
@@ -12,6 +25,11 @@ export interface SocialPost {
   commentCount: number
   liked: boolean
   saved: boolean
+  allowDownloads: boolean
+  allowRemixes: boolean
+  tags: TaggedMember[]
+  myTag: 'approved' | 'pending' | null
+  remixOf: RemixSource | null
 }
 
 export interface SocialComment {

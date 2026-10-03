@@ -2,6 +2,8 @@ export interface Member {
   id: string
   name: string
   following: boolean
+  requested: boolean
+  isPrivate: boolean
 }
 
 export interface Conversation {
