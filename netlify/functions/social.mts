@@ -1,11 +1,13 @@
 import type { Config, Context } from '@netlify/functions'
 import { getUser, verifyRequestOrigin } from '@netlify/identity'
 import { getStore } from '@netlify/blobs'
-import { and, desc, eq, ilike, lt, or, sql } from 'drizzle-orm'
+import { and, desc, eq, ilike, inArray, lt, or, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 import { getDatabase } from '../../db/index.js'
-import { bookmarks, comments, likes, posts } from '../../db/schema.js'
-import { readSettings, withoutHiddenWords } from '../../db/settings.js'
+import { notify } from '../../db/notifications.js'
+import { bookmarks, comments, likes, memberSettings, members, posts, postTags } from '../../db/schema.js'
+import { authorAllows, canViewPost, containsHiddenWord, readSettings, withoutHiddenWords } from '../../db/settings.js'
 
 class RequestError extends Error {
   constructor(message: string, public status = 400) { super(message) }
@@ -55,6 +57,12 @@ function mediaMatches(bytes: Uint8Array, type: string) {
   return false
 }
 
+const original = alias(posts, 'buzzly_original_posts')
+
+function parseJson<Value>(value: Value | string): Value {
+  return typeof value === 'string' ? JSON.parse(value) as Value : value
+}
+
 export default async (request: Request, context: Context) => {
   try {
     const user = await getUser()
@@ -71,11 +79,12 @@ export default async (request: Request, context: Context) => {
 
     if (!id && request.method === 'GET') {
       const view = url.searchParams.get('view') || 'all'
-      const conditions = []
+      const conditions = [canViewPost(user.id)]
       if (view === 'photos') conditions.push(ilike(posts.mediaType, 'image/%'))
       else if (view === 'clips') conditions.push(ilike(posts.mediaType, 'video/%'))
       else if (view === 'mine') conditions.push(eq(posts.authorId, user.id))
       else if (view === 'saved') conditions.push(sql`exists (select 1 from ${bookmarks} where ${bookmarks.postId} = ${posts.id} and ${bookmarks.userId} = ${user.id})`)
+      else if (view === 'tagged') conditions.push(sql`exists (select 1 from ${postTags} where ${postTags.postId} = ${posts.id} and ${postTags.userId} = ${user.id})`)
       else if (view !== 'all') throw new RequestError('Choose a valid feed.')
       const sharedPost = url.searchParams.get('post')
       if (sharedPost) {
@@ -100,8 +109,14 @@ export default async (request: Request, context: Context) => {
         commentCount: sql<number>`(select count(*)::int from ${comments} where ${comments.postId} = ${posts.id})`,
         liked: sql<boolean>`exists (select 1 from ${likes} where ${likes.postId} = ${posts.id} and ${likes.userId} = ${user.id})`,
         saved: sql<boolean>`exists (select 1 from ${bookmarks} where ${bookmarks.postId} = ${posts.id} and ${bookmarks.userId} = ${user.id})`,
-      }).from(posts).where(and(...conditions)).orderBy(desc(posts.createdAt), desc(posts.id)).limit(21)
-      const page = rows.slice(0, 20)
+        allowDownloads: authorAllows('allowDownloads'),
+        allowRemixes: authorAllows('allowRemixes'),
+        tags: sql<{ id: string; name: string }[] | string>`coalesce((select json_agg(json_build_object('id', ${members.userId}, 'name', ${members.displayName}) order by ${members.displayName}) from ${postTags} inner join ${members} on ${members.userId} = ${postTags.userId} where ${postTags.postId} = ${posts.id} and ${postTags.isApproved}), '[]'::json)`,
+        myTag: sql<'approved' | 'pending' | null>`(select case when ${postTags.isApproved} then 'approved' else 'pending' end from ${postTags} where ${postTags.postId} = ${posts.id} and ${postTags.userId} = ${user.id})`,
+        remix: { id: original.id, authorName: original.authorName, content: original.content, mediaType: original.mediaType, createdAt: original.createdAt },
+        remixVisible: sql<boolean>`${original.id} is not null and ${canViewPost(user.id, original.authorId, original.id)}`,
+      }).from(posts).leftJoin(original, eq(original.id, posts.remixOf)).where(and(...conditions)).orderBy(desc(posts.createdAt), desc(posts.id)).limit(21)
+      const page = rows.slice(0, 20).map(({ remix, remixVisible, tags, ...row }) => ({ ...row, tags: parseJson(tags), remixOf: remix && remixVisible ? remix : null }))
       const last = page.at(-1)
       return json({ posts: page, nextCursor: rows.length > 20 && last ? `${last.createdAt.toISOString()}|${last.id}` : null })
     }
@@ -113,9 +128,22 @@ export default async (request: Request, context: Context) => {
       catch { throw new RequestError('Please submit a valid post.') }
       const parsed = z.object({ content: z.string().trim().max(2000), mediaAlt: z.string().trim().max(300) }).safeParse({ content: form.get('content') ?? '', mediaAlt: form.get('mediaAlt') ?? '' })
       if (!parsed.success) throw new RequestError('Use up to 2,000 characters for your post and 300 for the media description.')
+      const tagInput = z.array(z.string().min(1).max(128)).max(10).safeParse(form.getAll('tag'))
+      if (!tagInput.success) throw new RequestError('Tag up to 10 members.')
+      const tagIds = [...new Set(tagInput.data)].filter((tagId) => tagId !== user.id)
+      const remixInput = form.get('remixOf')
+      const remixOf = typeof remixInput === 'string' && remixInput ? remixInput : null
+      if (remixOf) {
+        if (!z.uuid().safeParse(remixOf).success) throw new RequestError('That post could not be found.', 404)
+        const [source] = await db.select({ authorId: posts.authorId, allowRemixes: authorAllows('allowRemixes') }).from(posts).where(and(eq(posts.id, remixOf), canViewPost(user.id))).limit(1)
+        if (!source) throw new RequestError('The post you’re remixing is no longer available.', 404)
+        if (source.authorId !== user.id && !source.allowRemixes) throw new RequestError('This author has turned off remixes.', 403)
+      }
+      const tagged = tagIds.length ? await db.select({ id: members.userId, reviewTags: sql<boolean>`coalesce((select ${memberSettings.reviewTags} from ${memberSettings} where ${memberSettings.userId} = ${members.userId}), false)` }).from(members).where(inArray(members.userId, tagIds)) : []
+      if (tagged.length !== tagIds.length) throw new RequestError('One of the tagged members is unavailable.')
       const attachment = form.get('media')
       const file = attachment instanceof File && attachment.size > 0 ? attachment : null
-      if (!parsed.data.content && !file) throw new RequestError('Write something or add a photo or clip.')
+      if (!parsed.data.content && !file && !remixOf) throw new RequestError('Write something or add a photo or clip.')
       const postId = crypto.randomUUID()
       let mediaKey: string | null = null
       let mediaType: string | null = null
@@ -129,23 +157,33 @@ export default async (request: Request, context: Context) => {
         await getStore({ name: 'buzzly-media', consistency: 'strong' }).set(mediaKey, bytes.buffer)
       }
       try {
-        await db.insert(posts).values({ id: postId, authorId: user.id, authorName, content: parsed.data.content, mediaKey, mediaType, mediaAlt: parsed.data.mediaAlt || null })
+        await db.transaction(async (transaction) => {
+          await transaction.insert(posts).values({ id: postId, authorId: user.id, authorName, content: parsed.data.content, mediaKey, mediaType, mediaAlt: parsed.data.mediaAlt || null, remixOf })
+          if (tagged.length) await transaction.insert(postTags).values(tagged.map((member) => ({ postId, userId: member.id, isApproved: !member.reviewTags })))
+        })
       } catch (error) {
         if (mediaKey) await getStore('buzzly-media').delete(mediaKey).catch(() => undefined)
         throw error
+      }
+      for (const member of tagged) await notify(db, { recipientId: member.id, actorId: user.id, actorName: authorName, type: 'tag', postId })
+      if (remixOf) {
+        const [source] = await db.select({ authorId: posts.authorId }).from(posts).where(eq(posts.id, remixOf)).limit(1)
+        if (source) await notify(db, { recipientId: source.authorId, actorId: user.id, actorName: authorName, type: 'remix', postId })
       }
       return json({ id: postId }, 201)
     }
 
     if (!id) return json({ error: 'Method not allowed.' }, 405)
-    const [post] = await db.select().from(posts).where(eq(posts.id, id)).limit(1)
+    const [post] = await db.select({ id: posts.id, authorId: posts.authorId, mediaKey: posts.mediaKey, mediaType: posts.mediaType, allowDownloads: authorAllows('allowDownloads') }).from(posts).where(and(eq(posts.id, id), canViewPost(user.id))).limit(1)
     if (!post) throw new RequestError('This post is no longer available.', 404)
 
     if (action === 'media' && request.method === 'GET') {
       if (!post.mediaKey || !post.mediaType) throw new RequestError('This post has no media.', 404)
+      const download = url.searchParams.get('download') === '1'
+      if (download && post.authorId !== user.id && !post.allowDownloads) throw new RequestError('This author has turned off downloads.', 403)
       const buffer = await getStore({ name: 'buzzly-media', consistency: 'strong' }).get(post.mediaKey, { type: 'arrayBuffer' })
       if (!buffer) throw new RequestError('This media is unavailable.', 404)
-      const headers = { 'Content-Type': post.mediaType, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Accept-Ranges': 'bytes', 'Content-Disposition': 'inline' }
+      const headers = { 'Content-Type': post.mediaType, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Accept-Ranges': 'bytes', 'Content-Disposition': download ? `attachment; filename="buzzly-${post.id}.${post.mediaType.split('/')[1].replace('jpeg', 'jpg')}"` : 'inline' }
       const range = request.headers.get('range')
       if (range) {
         const match = /^bytes=(\d*)-(\d*)$/.exec(range)
@@ -169,8 +207,10 @@ export default async (request: Request, context: Context) => {
       const input = z.object({ active: z.boolean() }).safeParse(await readJson(request))
       if (!input.success) throw new RequestError('Choose a valid reaction.')
       const table = action === 'like' ? likes : bookmarks
-      if (input.data.active) await db.insert(table).values({ postId: id, userId: user.id }).onConflictDoNothing()
-      else await db.delete(table).where(and(eq(table.postId, id), eq(table.userId, user.id)))
+      if (input.data.active) {
+        const added = await db.insert(table).values({ postId: id, userId: user.id }).onConflictDoNothing().returning({ postId: table.postId })
+        if (added.length && action === 'like') await notify(db, { recipientId: post.authorId, actorId: user.id, actorName: authorName, type: 'like', postId: id })
+      } else await db.delete(table).where(and(eq(table.postId, id), eq(table.userId, user.id)))
       const [count] = await db.select({ total: sql<number>`count(*)::int` }).from(likes).where(eq(likes.postId, id))
       return json({ active: input.data.active, likeCount: count.total })
     }
@@ -195,7 +235,19 @@ export default async (request: Request, context: Context) => {
       const input = z.object({ content: z.string().trim().min(1).max(1000) }).safeParse(await readJson(request))
       if (!input.success) throw new RequestError('Write a comment between 1 and 1,000 characters.')
       const [comment] = await db.insert(comments).values({ postId: id, authorId: user.id, authorName, content: input.data.content }).returning()
+      if (!containsHiddenWord(comment.content, (await readSettings(db, post.authorId)).hiddenWords)) await notify(db, { recipientId: post.authorId, actorId: user.id, actorName: authorName, type: 'comment', postId: id })
       return json(comment, 201)
+    }
+
+    if (action === 'tag' && request.method === 'PUT') {
+      const input = z.object({ approve: z.boolean() }).safeParse(await readJson(request))
+      if (!input.success) throw new RequestError('Choose to approve or remove this tag.')
+      const mine = and(eq(postTags.postId, id), eq(postTags.userId, user.id))
+      const changed = input.data.approve
+        ? await db.update(postTags).set({ isApproved: true }).where(mine).returning({ postId: postTags.postId })
+        : await db.delete(postTags).where(mine).returning({ postId: postTags.postId })
+      if (!changed.length) throw new RequestError('You’re not tagged in this post.', 404)
+      return json({ myTag: input.data.approve ? 'approved' : null })
     }
     return json({ error: 'Method not allowed.' }, 405)
   } catch (error) {

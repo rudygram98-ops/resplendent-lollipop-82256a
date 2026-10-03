@@ -1,4 +1,5 @@
-import { check, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, check, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 export const posts = pgTable('buzzly_posts', {
@@ -9,6 +10,7 @@ export const posts = pgTable('buzzly_posts', {
   mediaKey: text('media_key'),
   mediaType: text('media_type'),
   mediaAlt: text('media_alt'),
+  remixOf: uuid('remix_of').references((): AnyPgColumn => posts.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
 }, (table) => [index('buzzly_posts_created_idx').on(table.createdAt, table.id), index('buzzly_posts_author_idx').on(table.authorId)])
 
@@ -34,6 +36,7 @@ export const comments = pgTable('buzzly_comments', {
 export const members = pgTable('buzzly_members', {
   userId: text('user_id').primaryKey(),
   displayName: text('display_name').notNull(),
+  isPrivate: boolean('is_private').notNull().default(false),
   updatedAt: timestamp('updated_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
 })
 
@@ -72,9 +75,47 @@ export const memberSettings = pgTable('buzzly_member_settings', {
   messagePolicy: text('message_policy').notNull().default('everyone'),
   hiddenWords: text('hidden_words').array().notNull().default(sql`'{}'::text[]`),
   screenTimeMinutes: integer('screen_time_minutes').notNull().default(0),
+  reviewTags: boolean('review_tags').notNull().default(false),
+  allowDownloads: boolean('allow_downloads').notNull().default(true),
+  allowRemixes: boolean('allow_remixes').notNull().default(true),
+  quietMode: boolean('quiet_mode').notNull().default(false),
+  quietStart: integer('quiet_start').notNull().default(1320),
+  quietEnd: integer('quiet_end').notNull().default(420),
+  timeZone: text('time_zone').notNull().default('UTC'),
   updatedAt: timestamp('updated_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
 }, (table) => [
   check('buzzly_member_settings_message_policy', sql`${table.messagePolicy} in ('everyone', 'following', 'nobody')`),
   check('buzzly_member_settings_screen_time', sql`${table.screenTimeMinutes} in (0, 30, 60, 120)`),
   check('buzzly_member_settings_hidden_words', sql`cardinality(${table.hiddenWords}) <= 50`),
+  check('buzzly_member_settings_quiet_hours', sql`${table.quietStart} between 0 and 1439 and ${table.quietEnd} between 0 and 1439`),
+])
+
+export const followRequests = pgTable('buzzly_follow_requests', {
+  requesterId: text('requester_id').notNull().references(() => members.userId, { onDelete: 'cascade' }),
+  targetId: text('target_id').notNull().references(() => members.userId, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.requesterId, table.targetId] }),
+  index('buzzly_follow_requests_target_idx').on(table.targetId, table.createdAt),
+  check('buzzly_follow_requests_not_self', sql`${table.requesterId} <> ${table.targetId}`),
+])
+
+export const postTags = pgTable('buzzly_post_tags', {
+  postId: uuid('post_id').notNull().references(() => posts.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => members.userId, { onDelete: 'cascade' }),
+  isApproved: boolean('is_approved').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, (table) => [primaryKey({ columns: [table.postId, table.userId] }), index('buzzly_post_tags_user_idx').on(table.userId, table.isApproved)])
+
+export const notifications = pgTable('buzzly_notifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  recipientId: text('recipient_id').notNull().references(() => members.userId, { onDelete: 'cascade' }),
+  actorId: text('actor_id').notNull().references(() => members.userId, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  postId: uuid('post_id').references(() => posts.id, { onDelete: 'cascade' }),
+  readAt: timestamp('read_at', { withTimezone: true, precision: 3 }),
+  createdAt: timestamp('created_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, (table) => [
+  index('buzzly_notifications_recipient_idx').on(table.recipientId, table.createdAt, table.id),
+  check('buzzly_notifications_type', sql`${table.type} in ('follow_request', 'follow_accepted', 'tag', 'comment', 'like', 'remix', 'message')`),
 ])

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Check, Clock3, LockKeyhole, MessageCircle, RefreshCw, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
+import { BellOff, Check, Clock3, LockKeyhole, MessageCircle, RefreshCw, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { parseHiddenWords, settingsRequest } from '@/lib/settings'
-import type { MemberSettings, MessagePolicy } from '@/lib/settings'
+import { browserTimeZone, minutesToTime, parseHiddenWords, settingsRequest, timeToMinutes } from '@/lib/settings'
+import type { MemberSettings, MessagePolicy, SettingsResponse } from '@/lib/settings'
 
 type Tab = 'privacy' | 'content' | 'interactions' | 'wellbeing'
 
@@ -14,6 +14,15 @@ const tabs: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: 'wellbeing', label: 'Digital wellbeing', icon: Clock3 },
 ]
 
+type ToggleKey = 'isPrivate' | 'reviewTags' | 'allowRemixes' | 'allowDownloads' | 'quietMode'
+
+function Toggle({ id, title, description, checked, disabled, onChange }: { id: string; title: string; description: string; checked: boolean; disabled: boolean; onChange: (checked: boolean) => void }) {
+  return <div className="setting-card">
+    <div><label htmlFor={id}>{title}</label><p id={`${id}-help`}>{description}</p></div>
+    <input id={id} type="checkbox" role="switch" className="setting-switch" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} aria-describedby={`${id}-help`} />
+  </div>
+}
+
 function SoonToggle({ id, title, description }: { id: string; title: string; description: string }) {
   return <div className="setting-card is-soon">
     <div><label htmlFor={id}>{title}<span className="soon-badge">Coming soon</span></label><p id={`${id}-help`}>{description}</p></div>
@@ -23,10 +32,14 @@ function SoonToggle({ id, title, description }: { id: string; title: string; des
 
 export default function AppSettings({ onAccount, onSaved }: { onAccount: () => void; onSaved: (settings: MemberSettings) => void }) {
   const [tab, setTab] = useState<Tab>('privacy')
-  const [saved, setSaved] = useState<MemberSettings | null>(null)
+  const [saved, setSaved] = useState<SettingsResponse | null>(null)
   const [messagePolicy, setMessagePolicy] = useState<MessagePolicy>('everyone')
   const [hiddenWords, setHiddenWords] = useState('')
   const [screenTime, setScreenTime] = useState(0)
+  const [toggles, setToggles] = useState<Record<ToggleKey, boolean>>({ isPrivate: false, reviewTags: false, allowRemixes: true, allowDownloads: true, quietMode: false })
+  const [quietStart, setQuietStart] = useState('22:00')
+  const [quietEnd, setQuietEnd] = useState('07:00')
+  const [timeZone, setTimeZone] = useState('UTC')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [retry, setRetry] = useState(0)
@@ -39,18 +52,33 @@ export default function AppSettings({ onAccount, onSaved }: { onAccount: () => v
     const controller = new AbortController()
     setLoading(true)
     setLoadError('')
-    settingsRequest({ signal: controller.signal }).then((settings) => {
-      setSaved(settings)
-      setMessagePolicy(settings.messagePolicy)
-      setHiddenWords(settings.hiddenWords.join(', '))
-      setScreenTime(settings.screenTimeMinutes)
-    }).catch((failure) => { if (!controller.signal.aborted) setLoadError(failure instanceof Error ? failure.message : 'Settings could not be loaded.') })
+    setTimeZone(browserTimeZone())
+    settingsRequest({ signal: controller.signal }).then(apply).catch((failure) => { if (!controller.signal.aborted) setLoadError(failure instanceof Error ? failure.message : 'Settings could not be loaded.') })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [retry])
 
+  function apply(settings: SettingsResponse) {
+    setSaved(settings)
+    setMessagePolicy(settings.messagePolicy)
+    setHiddenWords(settings.hiddenWords.join(', '))
+    setScreenTime(settings.screenTimeMinutes)
+    setToggles({ isPrivate: settings.isPrivate, reviewTags: settings.reviewTags, allowRemixes: settings.allowRemixes, allowDownloads: settings.allowDownloads, quietMode: settings.quietMode })
+    setQuietStart(minutesToTime(settings.quietStart))
+    setQuietEnd(minutesToTime(settings.quietEnd))
+  }
+
+  function change<Value>(setter: (value: Value) => void) {
+    return (value: Value) => { setter(value); setNotice(''); setError('') }
+  }
+
+  const setToggle = (key: ToggleKey) => change((checked: boolean) => setToggles((current) => ({ ...current, [key]: checked })))
   const words = parseHiddenWords(hiddenWords)
-  const dirty = Boolean(saved) && (messagePolicy !== saved?.messagePolicy || screenTime !== saved?.screenTimeMinutes || words.join(',') !== saved?.hiddenWords.join(','))
+  const startMinutes = timeToMinutes(quietStart)
+  const endMinutes = timeToMinutes(quietEnd)
+  const dirty = Boolean(saved) && (messagePolicy !== saved?.messagePolicy || screenTime !== saved?.screenTimeMinutes || words.join(',') !== saved?.hiddenWords.join(',')
+    || (Object.keys(toggles) as ToggleKey[]).some((key) => toggles[key] !== saved?.[key])
+    || startMinutes !== saved?.quietStart || endMinutes !== saved?.quietEnd || (toggles.quietMode && timeZone !== saved?.timeZone))
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -58,13 +86,14 @@ export default function AppSettings({ onAccount, onSaved }: { onAccount: () => v
     setNotice('')
     if (words.length > 50) { setError('Use up to 50 hidden words or phrases.'); setTab('content'); return }
     if (words.some((word) => word.length > 40)) { setError('Keep each hidden word or phrase to 40 characters or fewer.'); setTab('content'); return }
+    if (startMinutes === null || endMinutes === null) { setError('Choose a start and end time for quiet mode.'); setTab('wellbeing'); return }
+    if (toggles.quietMode && startMinutes === endMinutes) { setError('Quiet mode needs different start and end times.'); setTab('wellbeing'); return }
     saveLock.current = true
     setSaving(true)
     setError('')
     try {
-      const updated = await settingsRequest({ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messagePolicy, hiddenWords: words, screenTimeMinutes: screenTime }) })
-      setSaved(updated)
-      setHiddenWords(updated.hiddenWords.join(', '))
+      const updated = await settingsRequest({ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messagePolicy, hiddenWords: words, screenTimeMinutes: screenTime, ...toggles, quietStart: startMinutes, quietEnd: endMinutes, timeZone }) })
+      apply(updated)
       onSaved(updated)
       setNotice('Settings saved. They apply right away.')
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Your settings could not be saved. Please try again.') }
@@ -87,8 +116,9 @@ export default function AppSettings({ onAccount, onSaved }: { onAccount: () => v
               <div><strong>Find me by email or phone</strong><p>Members can never look you up by email or phone number. The directory shows display names only.</p></div>
               <span className="always-badge"><LockKeyhole size={12} />Always private</span>
             </div>
-            <SoonToggle id="setting-private" title="Private account" description="Only approved followers can see your posts and media." />
-            <SoonToggle id="setting-tags" title="Review tagged posts" description="Approve posts you’re tagged in before they appear with your name." />
+            <Toggle id="setting-private" title="Private account" description={toggles.isPrivate ? 'Only followers you approve can see your posts and media. New follows arrive as requests in Notifications.' : 'Anyone signed in can see your posts. Turning private on keeps current followers; turning it off approves any pending requests.'} checked={toggles.isPrivate} disabled={saving} onChange={setToggle('isPrivate')} />
+            {saved.isPrivate && saved.pendingRequests > 0 && <p className="setting-note">{saved.pendingRequests === 1 ? '1 follow request is' : `${saved.pendingRequests} follow requests are`} waiting for you in Notifications.</p>}
+            <Toggle id="setting-tags" title="Review tagged posts" description="New posts you’re tagged in stay off your Tagged posts and don’t show your name until you approve them." checked={toggles.reviewTags} disabled={saving} onChange={setToggle('reviewTags')} />
             <SoonToggle id="setting-close-friends" title="Close friends audience" description="Share selected posts with a smaller list of people." />
           </fieldset>}
 
@@ -118,8 +148,8 @@ export default function AppSettings({ onAccount, onSaved }: { onAccount: () => v
                 <option value="nobody">Nobody</option>
               </select>
             </div>
-            <SoonToggle id="setting-remix" title="Allow remixes" description="Let others feature your posts in their own responses." />
-            <SoonToggle id="setting-downloads" title="Allow media downloads" description="Offer viewers a download button for your photos and clips." />
+            <Toggle id="setting-remix" title="Allow remixes" description="Let others feature your posts in their own responses. Existing remixes stay up." checked={toggles.allowRemixes} disabled={saving} onChange={setToggle('allowRemixes')} />
+            <Toggle id="setting-downloads" title="Allow media downloads" description="Offer viewers a download button for your photos and clips. Turning this off removes the button but can’t stop screenshots." checked={toggles.allowDownloads} disabled={saving} onChange={setToggle('allowDownloads')} />
           </fieldset>}
 
           {tab === 'wellbeing' && <fieldset>
@@ -134,7 +164,13 @@ export default function AppSettings({ onAccount, onSaved }: { onAccount: () => v
                 <option value={120}>2 hours</option>
               </select>
             </div>
-            <SoonToggle id="setting-quiet" title="Quiet mode" description="Mute notifications overnight. Buzzly doesn’t send notifications yet." />
+            <Toggle id="setting-quiet" title="Quiet mode" description="Hold back notification alerts during your quiet hours. Notifications still collect in your list and appear once quiet hours end. Buzzly only sends in-app notifications, never email." checked={toggles.quietMode} disabled={saving} onChange={setToggle('quietMode')} />
+            {toggles.quietMode && <div className="setting-group quiet-hours">
+              <div><label htmlFor="setting-quiet-start">Quiet from</label><input id="setting-quiet-start" type="time" value={quietStart} onChange={(event) => change(setQuietStart)(event.target.value)} disabled={saving} required /></div>
+              <div><label htmlFor="setting-quiet-end">Until</label><input id="setting-quiet-end" type="time" value={quietEnd} onChange={(event) => change(setQuietEnd)(event.target.value)} disabled={saving} required /></div>
+              <small>Times use your time zone: {timeZone}{saved.quietNow && saved.quietMode ? ' · quiet hours are on right now' : ''}</small>
+            </div>}
+            {saved.quietNow && saved.quietMode && <p className="setting-note"><BellOff size={13} />Alerts are paused until {minutesToTime(saved.quietEnd)}.</p>}
           </fieldset>}
 
           {error && <p className="social-error" role="alert">{error}</p>}

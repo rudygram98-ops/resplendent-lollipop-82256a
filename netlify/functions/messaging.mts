@@ -3,8 +3,9 @@ import { getUser, verifyRequestOrigin } from '@netlify/identity'
 import { and, asc, desc, eq, gt, ilike, lt, ne, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDatabase } from '../../db/index.js'
-import { conversations, directMessages, follows, members } from '../../db/schema.js'
-import { readSettings, withoutHiddenWords } from '../../db/settings.js'
+import { notify } from '../../db/notifications.js'
+import { conversations, directMessages, followRequests, follows, members } from '../../db/schema.js'
+import { containsHiddenWord, readSettings, withoutHiddenWords } from '../../db/settings.js'
 
 class RequestError extends Error {
   constructor(message: string, public status = 400) { super(message) }
@@ -40,6 +41,10 @@ async function acceptsMessages(db: ReturnType<typeof getDatabase>, recipientId: 
   return Boolean(follow)
 }
 
+function displayName(name?: string) {
+  return (name || 'Buzzly member').trim().slice(0, 60) || 'Buzzly member'
+}
+
 const notAccepting = 'This member isn’t accepting messages from you right now.'
 
 function parseCursor(value: string) {
@@ -61,8 +66,8 @@ export default async (request: Request, context: Context) => {
     const { section, id, action } = context.params
 
     if (section === 'session' && !id && request.method === 'POST') {
-      const displayName = (user.name || 'Buzzly member').trim().slice(0, 60) || 'Buzzly member'
-      await db.insert(members).values({ userId: user.id, displayName }).onConflictDoUpdate({ target: members.userId, set: { displayName, updatedAt: new Date() } })
+      const name = displayName(user.name)
+      await db.insert(members).values({ userId: user.id, displayName: name }).onConflictDoUpdate({ target: members.userId, set: { displayName: name, updatedAt: new Date() } })
       return json({ ready: true })
     }
 
@@ -73,7 +78,8 @@ export default async (request: Request, context: Context) => {
       const cursor = url.searchParams.get('cursor')
       if (cursor && cursor.length > 128) throw new RequestError('Invalid member cursor.')
       const followingCondition = sql<boolean>`exists (select 1 from ${follows} where ${follows.followerId} = ${user.id} and ${follows.followingId} = ${members.userId})`
-      const rows = await db.select({ id: members.userId, name: members.displayName, following: followingCondition }).from(members).where(and(
+      const requested = sql<boolean>`exists (select 1 from ${followRequests} where ${followRequests.requesterId} = ${user.id} and ${followRequests.targetId} = ${members.userId})`
+      const rows = await db.select({ id: members.userId, name: members.displayName, following: followingCondition, requested, isPrivate: members.isPrivate }).from(members).where(and(
         ne(members.userId, user.id),
         query ? ilike(members.displayName, `%${query.replace(/[\\%_]/g, '\\$&')}%`) : undefined,
         followingOnly ? followingCondition : undefined,
@@ -87,13 +93,37 @@ export default async (request: Request, context: Context) => {
       if (id === user.id) throw new RequestError('You cannot follow yourself.')
       const input = z.object({ active: z.boolean() }).safeParse(await readJson(request))
       if (!input.success) throw new RequestError('Choose a valid follow action.')
-      const [member] = await db.select({ id: members.userId }).from(members).where(eq(members.userId, id)).limit(1)
+      const [member] = await db.select({ id: members.userId, isPrivate: members.isPrivate }).from(members).where(eq(members.userId, id)).limit(1)
       if (!member) throw new RequestError('This member is unavailable.', 404)
       const [self] = await db.select({ id: members.userId }).from(members).where(eq(members.userId, user.id)).limit(1)
       if (!self) throw new RequestError('Open Messages again to join the directory.', 409)
-      if (input.data.active) await db.insert(follows).values({ followerId: user.id, followingId: id }).onConflictDoNothing()
-      else await db.delete(follows).where(and(eq(follows.followerId, user.id), eq(follows.followingId, id)))
-      return json({ active: input.data.active })
+      if (!input.data.active) {
+        await db.delete(follows).where(and(eq(follows.followerId, user.id), eq(follows.followingId, id)))
+        await db.delete(followRequests).where(and(eq(followRequests.requesterId, user.id), eq(followRequests.targetId, id)))
+        return json({ active: false, requested: false })
+      }
+      const [existing] = await db.select({ id: follows.followerId }).from(follows).where(and(eq(follows.followerId, user.id), eq(follows.followingId, id))).limit(1)
+      if (existing) return json({ active: true, requested: false })
+      if (member.isPrivate) {
+        const created = await db.insert(followRequests).values({ requesterId: user.id, targetId: id }).onConflictDoNothing().returning({ id: followRequests.targetId })
+        if (created.length) await notify(db, { recipientId: id, actorId: user.id, actorName: displayName(user.name), type: 'follow_request' })
+        return json({ active: false, requested: true })
+      }
+      await db.insert(follows).values({ followerId: user.id, followingId: id }).onConflictDoNothing()
+      return json({ active: true, requested: false })
+    }
+
+    if (section === 'members' && id && action === 'request' && request.method === 'PUT') {
+      const input = z.object({ approve: z.boolean() }).safeParse(await readJson(request))
+      if (!input.success) throw new RequestError('Choose to approve or decline this request.')
+      const approved = await db.transaction(async (transaction) => {
+        const [pending] = await transaction.delete(followRequests).where(and(eq(followRequests.requesterId, id), eq(followRequests.targetId, user.id))).returning({ id: followRequests.requesterId })
+        if (!pending) throw new RequestError('This follow request is no longer pending.', 404)
+        if (input.data.approve) await transaction.insert(follows).values({ followerId: id, followingId: user.id }).onConflictDoNothing()
+        return input.data.approve
+      })
+      if (approved) await notify(db, { recipientId: id, actorId: user.id, actorName: displayName(user.name), type: 'follow_accepted' })
+      return json({ approved })
     }
 
     const participant = or(eq(conversations.memberOne, user.id), eq(conversations.memberTwo, user.id))
@@ -161,12 +191,13 @@ export default async (request: Request, context: Context) => {
         const [created] = await transaction.insert(directMessages).values({ conversationId: id, senderId: user.id, content: input.data.content, clientId: input.data.clientId }).onConflictDoNothing({ target: [directMessages.senderId, directMessages.clientId] }).returning()
         if (created) {
           await transaction.update(conversations).set({ updatedAt: sql`greatest(${conversations.updatedAt}, ${created.createdAt.toISOString()}::timestamptz)` }).where(eq(conversations.id, id))
-          return created
+          return { ...created, isNew: true }
         }
         const [existing] = await transaction.select().from(directMessages).where(and(eq(directMessages.senderId, user.id), eq(directMessages.clientId, input.data.clientId))).limit(1)
         if (!existing || existing.conversationId !== id || existing.content !== input.data.content) throw new RequestError('This send attempt has changed. Please try again.', 409)
-        return existing
+        return { ...existing, isNew: false }
       })
+      if (message.isNew && !containsHiddenWord(message.content, (await readSettings(db, peerId)).hiddenWords)) await notify(db, { recipientId: peerId, actorId: user.id, actorName: displayName(user.name), type: 'message', collapse: true })
       return json({ id: message.id, conversationId: message.conversationId, senderId: message.senderId, content: message.content, createdAt: message.createdAt }, 201)
     }
     return json({ error: 'Method not allowed.' }, 405)
