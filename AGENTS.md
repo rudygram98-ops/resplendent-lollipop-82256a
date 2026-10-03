@@ -7,6 +7,8 @@ Buzzly is a social experience built with React 19, TypeScript, TanStack Start, N
 - `src/routes/index.tsx` renders the Buzzly experience at `/`.
 - `src/routes/__root.tsx` provides the HTML shell, stylesheet import, favicon, and sharing metadata.
 - `src/components/Buzzly.tsx` contains the brand presentation, illustrative community preview, authentication forms, help dialog, and signed-in account panel.
+- `src/components/ProfileSettings.tsx` edits the signed-in user's display name, email, private phone number, bio, and profile photo. Profile fields persist in Identity metadata; email changes require confirmation.
+- `netlify/functions/profile-avatar.mts` stores profile photos in Netlify Blobs with authenticated, owner-only access, same-origin mutations, a 4 MB limit, required descriptions, and file-signature validation.
 - `src/components/SocialFeed.tsx` contains the signed-in feed, photo and clip views, composer, reactions, bookmarks, and comments.
 - `src/lib/social.ts` contains shared API types and browser-side requests.
 - `netlify/functions/social.mts` validates Identity sessions and authorizes all community and media operations server-side.
