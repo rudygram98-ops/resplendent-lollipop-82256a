@@ -7,7 +7,8 @@ import {
   Trash2, UserRound, UsersRound, X, Zap,
 } from 'lucide-react'
 import { initials, socialRequest } from '@/lib/social'
-import type { FeedView, SocialComment, SocialPost } from '@/lib/social'
+import type { FeedView, PublicProfile, SocialComment, SocialPost } from '@/lib/social'
+import Settings from '@/components/Settings'
 
 type FeedPage = { posts: SocialPost[]; nextCursor: string | null }
 type CommentPage = { comments: SocialComment[]; nextCursor: string | null }
@@ -125,7 +126,10 @@ function PostCard({ post, user, onChange, onDelete }: {
   </article>
 }
 
-export default function SocialFeed({ user, onAccount }: { user: User; onAccount: () => void }) {
+export default function SocialFeed({ user, initialNotice, onUserChange }: { user: User; initialNotice?: string; onUserChange: (user: User) => void }) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [profile, setProfile] = useState<PublicProfile | null>(null)
+  const onAccount = () => setSettingsOpen(true)
   const [view, setView] = useState<FeedView>('all')
   const [page, setPage] = useState<FeedPage>({ posts: [], nextCursor: null })
   const [loading, setLoading] = useState(true)
@@ -142,7 +146,7 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
   const [mediaAlt, setMediaAlt] = useState('')
   const [publishing, setPublishing] = useState(false)
   const [postError, setPostError] = useState('')
-  const [notice, setNotice] = useState('')
+  const [notice, setNotice] = useState(initialNotice || '')
   const fileInput = useRef<HTMLInputElement>(null)
   const composer = useRef<HTMLTextAreaElement>(null)
   const publishLock = useRef(false)
@@ -235,6 +239,8 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
   const heading = sharedPost ? 'A shared moment' : view === 'saved' ? 'Worth keeping.' : view === 'mine' ? 'Your little world.' : 'Your world, unfiltered.'
   const emptyHeading = query ? 'No moments match that search.' : sharedPost ? 'This moment is no longer here.' : view === 'saved' ? 'Keep the good stuff.' : view === 'photos' ? 'A picture starts it all.' : view === 'clips' ? 'Make the first move.' : view === 'mine' ? 'Your story starts here.' : 'A fresh space. Your first moment.'
   const emptyDescription = query ? 'Try another name or a different phrase.' : sharedPost ? 'The author may have deleted the post.' : view === 'saved' ? 'Tap the bookmark on any post to find it here later. Only you see your saved list.' : view === 'photos' ? 'Share a photo and give everyday moments a place to live.' : view === 'clips' ? 'Upload a short video. A little motion, a lot of personality.' : 'Share a thought, a photo, or a clip. Real people, real posts—no made-up feed.'
+
+  if (settingsOpen) return <div className="social-shell"><main className="social-main"><button className="text-button" onClick={() => setSettingsOpen(false)}><ChevronLeft size={16} />Back to the buzz</button><Settings user={user} profile={profile} onProfileChange={setProfile} onUserChange={onUserChange} /></main></div>
 
   return <div className="social-shell">
     <aside className="social-sidebar">

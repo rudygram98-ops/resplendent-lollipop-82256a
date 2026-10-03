@@ -1,4 +1,5 @@
-import { index, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { index, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 
 export const posts = pgTable('buzzly_posts', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -29,3 +30,34 @@ export const comments = pgTable('buzzly_comments', {
   content: text('content').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
 }, (table) => [index('buzzly_comments_post_idx').on(table.postId, table.createdAt)])
+
+export const profiles = pgTable('buzzly_profiles', {
+  userId: text('user_id').primaryKey(),
+  username: text('username').notNull(),
+  displayName: text('display_name').notNull(),
+  avatarKey: text('avatar_key'),
+  updatedAt: timestamp('updated_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, (table) => [uniqueIndex('buzzly_profiles_username_idx').on(sql`lower(${table.username})`)])
+
+export const blocks = pgTable('buzzly_blocks', {
+  blockerId: text('blocker_id').notNull(),
+  blockedId: text('blocked_id').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, (table) => [primaryKey({ columns: [table.blockerId, table.blockedId] }), index('buzzly_blocks_blocked_idx').on(table.blockedId)])
+
+export const conversations = pgTable('buzzly_conversations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userA: text('user_a').notNull(),
+  userB: text('user_b').notNull(),
+  lastMessageAt: timestamp('last_message_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+  readA: timestamp('read_a', { withTimezone: true, precision: 3 }),
+  readB: timestamp('read_b', { withTimezone: true, precision: 3 }),
+}, (table) => [uniqueIndex('buzzly_conversations_pair_idx').on(table.userA, table.userB), index('buzzly_conversations_b_idx').on(table.userB)])
+
+export const messages = pgTable('buzzly_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  conversationId: uuid('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  senderId: text('sender_id').notNull(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, (table) => [index('buzzly_messages_conversation_idx').on(table.conversationId, table.createdAt)])
