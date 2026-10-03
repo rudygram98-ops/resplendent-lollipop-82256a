@@ -11,6 +11,7 @@ Buzzly is a social experience built with React 19, TypeScript, TanStack Start, N
 - `src/lib/social.ts` contains shared API types and browser-side requests.
 - `netlify/functions/social.mts` validates Identity sessions and authorizes all community and media operations server-side.
 - `db/schema.ts` defines posts, likes, private bookmarks, and comments; Drizzle migrations live in `netlify/database/migrations` and are applied by Netlify during deployment.
+- `src/lib/storage.ts` wraps LocalStorage for non-sensitive conveniences only: the last-used email and per-user post drafts, which are cleared on sign-out. Never store passwords, tokens, or account records there.
 - `src/lib/auth.ts` maps authentication errors to safe, actionable messages without exposing raw service responses.
 - `src/styles.css` defines the responsive dark-and-rose design, form states, and reduced-motion support.
 - `public/images/` contains the static scenic image used in the clearly labeled preview, served through Netlify Image CDN.

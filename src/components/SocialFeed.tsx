@@ -7,6 +7,7 @@ import {
   Trash2, UserRound, UsersRound, X, Zap,
 } from 'lucide-react'
 import { initials, socialRequest } from '@/lib/social'
+import { readLocal, writeLocal } from '@/lib/storage'
 import type { FeedView, SocialComment, SocialPost } from '@/lib/social'
 
 type FeedPage = { posts: SocialPost[]; nextCursor: string | null }
@@ -148,6 +149,12 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
   const publishLock = useRef(false)
   const feedVersion = useRef(0)
   const name = user.name || 'Buzzly member'
+
+  const draftKey = `draft:${user.id}`
+
+  useEffect(() => { setContent((current) => current || readLocal(draftKey)) }, [draftKey])
+
+  useEffect(() => { writeLocal(draftKey, content) }, [draftKey, content])
 
   useEffect(() => { setSharedPost(new URLSearchParams(window.location.search).get('post')); setReady(true) }, [])
 

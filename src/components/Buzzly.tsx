@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { authErrorMessage } from '@/lib/auth'
+import { clearLocalDrafts, readLocal, writeLocal } from '@/lib/storage'
 import SocialFeed from '@/components/SocialFeed'
 
 type AuthMode = 'login' | 'signup' | 'forgot' | 'reset' | 'invite'
@@ -122,6 +123,7 @@ export function Buzzly() {
         if (active) setInitializing(false)
       }
     }
+    setEmail((current) => current || readLocal('email'))
     void initialize()
     void getSettings().then((value) => { if (active) setSettings(value) }).catch(() => {})
     return () => { active = false; unsubscribe() }
@@ -186,6 +188,7 @@ export function Buzzly() {
         inviteToken.current = null
         setMode('login')
       }
+      if (mode === 'login' || mode === 'signup') writeLocal('email', email.trim())
       setPassword('')
       setConfirm('')
     } catch (caught) {
@@ -203,11 +206,12 @@ export function Buzzly() {
     setError('')
     try {
       await logout()
+      clearLocalDrafts()
       setUser(null)
       setMode('login')
       setEditingName(false)
       setName('')
-      setEmail('')
+      setEmail(readLocal('email'))
       setNotice('You’re signed out. See you around!')
     } catch (caught) {
       setUser(await getUser())
