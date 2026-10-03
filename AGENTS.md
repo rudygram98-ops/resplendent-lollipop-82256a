@@ -13,11 +13,13 @@ Buzzly is a social experience built with React 19, TypeScript, TanStack Start, N
 - `src/components/DirectMessaging.tsx` contains the private inbox, searchable member directory, follow controls, followed-member filter, and paginated one-to-one chats.
 - `src/lib/messaging.ts` contains messaging types and same-origin browser requests. `netlify/functions/messaging.mts` validates sessions, owns directory registration, and restricts conversations and messages to their two participants.
 - `netlify/functions/messaging-members.mts` synchronizes directory display-name changes and removes directory records, follows, and conversations when an Identity account is deleted.
+- `src/components/AppSettings.tsx` is the signed-in Settings & Privacy page. Only enforced settings are editable: who can message the member (everyone, people they follow, nobody), hidden words, and a daily time reminder. Unbuilt features (private accounts, tagging, close friends, sensitive-content filtering, remixes, downloads, quiet mode) appear disabled and labeled "Coming soon"; email and phone lookup is shown as always private.
+- `netlify/functions/settings.mts` reads and saves the signed-in member's settings in `buzzly_member_settings`. `db/settings.ts` provides shared helpers: messaging enforces the recipient's message policy on new conversations and sends, and comments and received messages matching the viewer's hidden words are filtered server-side (the viewer's own content is never hidden).
 - `src/lib/social.ts` contains shared API types and browser-side requests.
 - `netlify/functions/social.mts` validates Identity sessions and authorizes all community and media operations server-side.
 - `db/schema.ts` defines posts, likes, private bookmarks, and comments; Drizzle migrations live in `netlify/database/migrations` and are applied by Netlify during deployment.
 - The messaging schema stores directory display names, private follow relationships, unique participant pairs, and messages with idempotent send identifiers. A new forward-only migration adds these tables without modifying applied migrations.
-- `src/lib/storage.ts` wraps LocalStorage for non-sensitive conveniences only: the last-used email and per-user post drafts, which are cleared on sign-out. Never store passwords, tokens, or account records there.
+- `src/lib/storage.ts` wraps LocalStorage for non-sensitive conveniences only: the last-used email, per-user post drafts, and the per-user daily usage counter for the time reminder, which are cleared on sign-out. Never store passwords, tokens, or account records there.
 - `src/lib/auth.ts` maps authentication errors to safe, actionable messages without exposing raw service responses.
 - `src/styles.css` defines the responsive dark-and-rose design, form states, and reduced-motion support.
 - `public/images/` contains the static scenic image used in the clearly labeled preview, served through Netlify Image CDN.

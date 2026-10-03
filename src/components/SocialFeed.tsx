@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import type { User } from '@netlify/identity'
 import {
   ArrowDown, ArrowRight, ArrowUpRight, Bookmark, Check, ChevronLeft, Film, Heart, Home,
-  ImagePlus, MessageCircle, Plus, RefreshCw, Send, Share2, Sparkles,
+  ImagePlus, MessageCircle, Plus, RefreshCw, Send, Settings, Share2, Sparkles,
   Trash2, UserRound, UsersRound, X, Zap,
 } from 'lucide-react'
 import { initials, socialRequest } from '@/lib/social'
@@ -12,6 +12,8 @@ import type { FeedView, SocialComment, SocialPost } from '@/lib/social'
 import DirectMessaging from '@/components/DirectMessaging'
 import SearchBar from '@/components/SearchBar'
 import { messagingRequest } from '@/lib/messaging'
+import AppSettings from '@/components/AppSettings'
+import { settingsRequest, useScreenTimeReminder } from '@/lib/settings'
 
 type FeedPage = { posts: SocialPost[]; nextCursor: string | null }
 type CommentPage = { comments: SocialComment[]; nextCursor: string | null }
@@ -131,7 +133,8 @@ function PostCard({ post, user, onChange, onDelete }: {
 
 export default function SocialFeed({ user, onAccount }: { user: User; onAccount: () => void }) {
   const [view, setView] = useState<FeedView>('all')
-  const [messagingOpen, setMessagingOpen] = useState(false)
+  const [section, setSection] = useState<'feed' | 'messages' | 'settings'>('feed')
+  const [screenTimeMinutes, setScreenTimeMinutes] = useState(0)
   const [directorySearch, setDirectorySearch] = useState('')
   const [page, setPage] = useState<FeedPage>({ posts: [], nextCursor: null })
   const [loading, setLoading] = useState(true)
@@ -162,6 +165,14 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
     void messagingRequest('/session', { method: 'POST', signal: controller.signal }).catch(() => undefined)
     return () => controller.abort()
   }, [user.id])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    void settingsRequest({ signal: controller.signal }).then((saved) => setScreenTimeMinutes(saved.screenTimeMinutes)).catch(() => undefined)
+    return () => controller.abort()
+  }, [user.id])
+
+  const reminder = useScreenTimeReminder(user.id, screenTimeMinutes)
 
   useEffect(() => { setContent((current) => current || readLocal(draftKey)) }, [draftKey])
 
@@ -195,7 +206,7 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
   }, [view, query, refresh, ready, sharedPost])
 
   function selectView(next: FeedView) {
-    setMessagingOpen(false)
+    setSection('feed')
     setView(next)
     setSharedPost(null)
     setQuery('')
@@ -260,22 +271,24 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
       <a className="brand" href="/" aria-label="Buzzly home"><span className="brand-icon"><Zap size={24} fill="currentColor" /></span><span>buzzly<span className="brand-dot">.</span></span></a>
       <span className="sidebar-caption">YOUR EVERYDAY, CONNECTED</span>
       <nav aria-label="Community navigation">
-        <button className={!messagingOpen && view === 'all' ? 'selected' : ''} aria-current={!messagingOpen && view === 'all' ? 'page' : undefined} onClick={() => selectView('all')}><Home size={21} />Home feed</button>
-        <button className={!messagingOpen && view === 'photos' ? 'selected' : ''} aria-current={!messagingOpen && view === 'photos' ? 'page' : undefined} onClick={() => selectView('photos')}><ImagePlus size={21} />Moments<span className="nav-tag">PHOTOS</span></button>
-        <button className={!messagingOpen && view === 'clips' ? 'selected' : ''} aria-current={!messagingOpen && view === 'clips' ? 'page' : undefined} onClick={() => selectView('clips')}><Film size={21} />Clips</button>
-        <button className={messagingOpen ? 'selected' : ''} aria-current={messagingOpen ? 'page' : undefined} onClick={() => { setDirectorySearch(''); setMessagingOpen(true) }}><Send size={21} />Messages</button>
-        <button className={!messagingOpen && view === 'saved' ? 'selected' : ''} aria-current={!messagingOpen && view === 'saved' ? 'page' : undefined} onClick={() => selectView('saved')}><Bookmark size={21} />Saved</button>
-        <button className={!messagingOpen && view === 'mine' ? 'selected' : ''} aria-current={!messagingOpen && view === 'mine' ? 'page' : undefined} onClick={() => selectView('mine')}><UserRound size={21} />My posts</button>
+        <button className={section === 'feed' && view === 'all' ? 'selected' : ''} aria-current={section === 'feed' && view === 'all' ? 'page' : undefined} onClick={() => selectView('all')}><Home size={21} />Home feed</button>
+        <button className={section === 'feed' && view === 'photos' ? 'selected' : ''} aria-current={section === 'feed' && view === 'photos' ? 'page' : undefined} onClick={() => selectView('photos')}><ImagePlus size={21} />Moments<span className="nav-tag">PHOTOS</span></button>
+        <button className={section === 'feed' && view === 'clips' ? 'selected' : ''} aria-current={section === 'feed' && view === 'clips' ? 'page' : undefined} onClick={() => selectView('clips')}><Film size={21} />Clips</button>
+        <button className={section === 'messages' ? 'selected' : ''} aria-current={section === 'messages' ? 'page' : undefined} onClick={() => { setDirectorySearch(''); setSection('messages') }}><Send size={21} />Messages</button>
+        <button className={section === 'feed' && view === 'saved' ? 'selected' : ''} aria-current={section === 'feed' && view === 'saved' ? 'page' : undefined} onClick={() => selectView('saved')}><Bookmark size={21} />Saved</button>
+        <button className={section === 'feed' && view === 'mine' ? 'selected' : ''} aria-current={section === 'feed' && view === 'mine' ? 'page' : undefined} onClick={() => selectView('mine')}><UserRound size={21} />My posts</button>
+        <button className={section === 'settings' ? 'selected' : ''} aria-current={section === 'settings' ? 'page' : undefined} onClick={() => setSection('settings')}><Settings size={21} />Settings</button>
       </nav>
-      {!messagingOpen && <button className="primary-button sidebar-create" onClick={() => { composer.current?.scrollIntoView({ block: 'center' }); composer.current?.focus() }}><Plus size={20} />Create a post</button>}
+      {section === 'feed' && <button className="primary-button sidebar-create" onClick={() => { composer.current?.scrollIntoView({ block: 'center' }); composer.current?.focus() }}><Plus size={20} />Create a post</button>}
       <div className="sidebar-note"><Sparkles size={20} /><p>A little less noise.<br /><strong>A lot more you.</strong></p></div>
       <button className="sidebar-account" onClick={onAccount}><span className="social-avatar">{initials(name)}</span><span><strong>{name}</strong><small>Account & settings</small></span><ArrowRight size={17} /></button>
     </aside>
 
     <main className="social-main">
-      {messagingOpen ? <DirectMessaging user={user} onAccount={onAccount} initialQuery={directorySearch} /> : <>
+      {reminder.due && <div className="screen-time-reminder" role="status"><Sparkles size={17} /><p>You’ve reached your daily time on Buzzly. Maybe a good moment for a little break?</p><button className="text-button" onClick={reminder.dismiss}>Dismiss for today</button></div>}
+      {section === 'messages' ? <DirectMessaging user={user} onAccount={onAccount} initialQuery={directorySearch} /> : section === 'settings' ? <AppSettings onAccount={onAccount} onSaved={(saved) => setScreenTimeMinutes(saved.screenTimeMinutes)} /> : <>
       <header className="feed-header"><div><span className="eyebrow"><span /> THE BUZZ STARTS HERE</span><h1>{heading}</h1><p>Your thoughts. Your moments. Your kind of people.</p></div><button className="icon-button mobile-account" onClick={onAccount} aria-label="Open account settings"><UserRound size={22} /></button></header>
-      <SearchBar value={queryInput} onChange={setQueryInput} onSearch={(term) => { setSharedPost(null); setQuery(term); window.history.replaceState(null, '', '/') }} onPost={(id) => { setView('all'); setQuery(''); setSharedPost(id); window.history.replaceState(null, '', `/?post=${encodeURIComponent(id)}`) }} onMembers={(term) => { setDirectorySearch(term); setMessagingOpen(true) }} />
+      <SearchBar value={queryInput} onChange={setQueryInput} onSearch={(term) => { setSharedPost(null); setQuery(term); window.history.replaceState(null, '', '/') }} onPost={(id) => { setView('all'); setQuery(''); setSharedPost(id); window.history.replaceState(null, '', `/?post=${encodeURIComponent(id)}`) }} onMembers={(term) => { setDirectorySearch(term); setSection('messages') }} />
 
       <form className="post-composer" onSubmit={publish} aria-busy={publishing}>
         <div className="composer-top"><span className="social-avatar">{initials(name)}</span><div><label htmlFor="post-content">Got something on your mind, {name.split(' ')[0]}?</label><textarea id="post-content" ref={composer} value={content} onChange={(event) => setContent(event.target.value)} placeholder="A thought. A moment. A little bit of you." maxLength={2000} disabled={publishing} rows={3} /></div></div>

@@ -5,6 +5,7 @@ import { and, desc, eq, ilike, lt, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDatabase } from '../../db/index.js'
 import { bookmarks, comments, likes, posts } from '../../db/schema.js'
+import { readSettings, withoutHiddenWords } from '../../db/settings.js'
 
 class RequestError extends Error {
   constructor(message: string, public status = 400) { super(message) }
@@ -182,7 +183,9 @@ export default async (request: Request, context: Context) => {
         if (!z.iso.datetime().safeParse(date).success || !z.uuid().safeParse(commentId).success) throw new RequestError('Invalid comment cursor.')
         cursorCondition = or(lt(comments.createdAt, new Date(date)), and(eq(comments.createdAt, new Date(date)), lt(comments.id, commentId)))
       }
-      const rows = await db.select().from(comments).where(and(eq(comments.postId, id), cursorCondition)).orderBy(desc(comments.createdAt), desc(comments.id)).limit(31)
+      const { hiddenWords } = await readSettings(db, user.id)
+      const visible = hiddenWords.length ? or(eq(comments.authorId, user.id), withoutHiddenWords(comments.content, hiddenWords)) : undefined
+      const rows = await db.select().from(comments).where(and(eq(comments.postId, id), cursorCondition, visible)).orderBy(desc(comments.createdAt), desc(comments.id)).limit(31)
       const page = rows.slice(0, 30)
       const last = page.at(-1)
       return json({ comments: page, nextCursor: rows.length > 30 && last ? `${last.createdAt.toISOString()}|${last.id}` : null })

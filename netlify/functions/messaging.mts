@@ -4,6 +4,7 @@ import { and, asc, desc, eq, gt, ilike, lt, ne, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDatabase } from '../../db/index.js'
 import { conversations, directMessages, follows, members } from '../../db/schema.js'
+import { readSettings, withoutHiddenWords } from '../../db/settings.js'
 
 class RequestError extends Error {
   constructor(message: string, public status = 400) { super(message) }
@@ -30,6 +31,16 @@ async function readJson(request: Request) {
   for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.length }
   try { return JSON.parse(new TextDecoder().decode(body)) as unknown } catch { throw new RequestError('Invalid request.') }
 }
+
+async function acceptsMessages(db: ReturnType<typeof getDatabase>, recipientId: string, senderId: string) {
+  const { messagePolicy } = await readSettings(db, recipientId)
+  if (messagePolicy === 'everyone') return true
+  if (messagePolicy === 'nobody') return false
+  const [follow] = await db.select({ id: follows.followerId }).from(follows).where(and(eq(follows.followerId, recipientId), eq(follows.followingId, senderId))).limit(1)
+  return Boolean(follow)
+}
+
+const notAccepting = 'This member isn’t accepting messages from you right now.'
 
 function parseCursor(value: string) {
   const parts = value.split('|')
@@ -103,6 +114,9 @@ export default async (request: Request, context: Context) => {
       const input = z.object({ recipientId: z.string().min(1).max(128) }).safeParse(await readJson(request))
       if (!input.success || input.data.recipientId === user.id) throw new RequestError('Choose another member to message.')
       const recipientId = input.data.recipientId
+      const [pairOne, pairTwo] = [user.id, recipientId].sort()
+      const [existing] = await db.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.memberOne, pairOne), eq(conversations.memberTwo, pairTwo))).limit(1)
+      if (!existing && !await acceptsMessages(db, recipientId, user.id)) throw new RequestError(notAccepting, 403)
       const conversation = await db.transaction(async (transaction) => {
         const [peer] = await transaction.select({ id: members.userId, name: members.displayName }).from(members).where(eq(members.userId, recipientId)).limit(1)
         if (!peer) throw new RequestError('This member is unavailable.', 404)
@@ -117,7 +131,7 @@ export default async (request: Request, context: Context) => {
     }
 
     if (section !== 'conversations' || !id || !z.uuid().safeParse(id).success || action !== 'messages') return json({ error: 'Not found.' }, 404)
-    const [conversation] = await db.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.id, id), participant)).limit(1)
+    const [conversation] = await db.select({ id: conversations.id, memberOne: conversations.memberOne, memberTwo: conversations.memberTwo }).from(conversations).where(and(eq(conversations.id, id), participant)).limit(1)
     if (!conversation) throw new RequestError('This conversation is unavailable.', 404)
 
     if (request.method === 'GET') {
@@ -129,7 +143,9 @@ export default async (request: Request, context: Context) => {
         ? or(gt(directMessages.createdAt, cursor.date), and(eq(directMessages.createdAt, cursor.date), gt(directMessages.id, cursor.id)))
         : or(lt(directMessages.createdAt, cursor.date), and(eq(directMessages.createdAt, cursor.date), lt(directMessages.id, cursor.id))) : undefined
       const order = after ? asc : desc
-      const rows = await db.select({ id: directMessages.id, conversationId: directMessages.conversationId, senderId: directMessages.senderId, content: directMessages.content, createdAt: directMessages.createdAt }).from(directMessages).where(and(eq(directMessages.conversationId, id), cursorCondition)).orderBy(order(directMessages.createdAt), order(directMessages.id)).limit(51)
+      const { hiddenWords } = await readSettings(db, user.id)
+      const visible = hiddenWords.length ? or(eq(directMessages.senderId, user.id), withoutHiddenWords(directMessages.content, hiddenWords)) : undefined
+      const rows = await db.select({ id: directMessages.id, conversationId: directMessages.conversationId, senderId: directMessages.senderId, content: directMessages.content, createdAt: directMessages.createdAt }).from(directMessages).where(and(eq(directMessages.conversationId, id), cursorCondition, visible)).orderBy(order(directMessages.createdAt), order(directMessages.id)).limit(51)
       const page = rows.slice(0, 50)
       const last = page.at(-1)
       return json({ messages: after ? page : page.reverse(), nextCursor: rows.length > 50 && last ? `${last.createdAt.toISOString()}|${last.id}` : null })
@@ -138,6 +154,9 @@ export default async (request: Request, context: Context) => {
     if (request.method === 'POST') {
       const input = z.object({ content: z.string().trim().min(1).max(2000), clientId: z.uuid() }).safeParse(await readJson(request))
       if (!input.success) throw new RequestError('Write a message between 1 and 2,000 characters.')
+      const peerId = conversation.memberOne === user.id ? conversation.memberTwo : conversation.memberOne
+      const [retry] = await db.select({ id: directMessages.id }).from(directMessages).where(and(eq(directMessages.senderId, user.id), eq(directMessages.clientId, input.data.clientId))).limit(1)
+      if (!retry && !await acceptsMessages(db, peerId, user.id)) throw new RequestError(notAccepting, 403)
       const message = await db.transaction(async (transaction) => {
         const [created] = await transaction.insert(directMessages).values({ conversationId: id, senderId: user.id, content: input.data.content, clientId: input.data.clientId }).onConflictDoNothing({ target: [directMessages.senderId, directMessages.clientId] }).returning()
         if (created) {

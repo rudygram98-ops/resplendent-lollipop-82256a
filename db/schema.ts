@@ -1,4 +1,4 @@
-import { check, index, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { check, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 export const posts = pgTable('buzzly_posts', {
@@ -65,4 +65,16 @@ export const directMessages = pgTable('buzzly_direct_messages', {
   index('buzzly_direct_messages_thread_idx').on(table.conversationId, table.createdAt, table.id),
   uniqueIndex('buzzly_direct_messages_retry_idx').on(table.senderId, table.clientId),
   check('buzzly_direct_messages_content_length', sql`char_length(${table.content}) between 1 and 2000`),
+])
+
+export const memberSettings = pgTable('buzzly_member_settings', {
+  userId: text('user_id').primaryKey().references(() => members.userId, { onDelete: 'cascade' }),
+  messagePolicy: text('message_policy').notNull().default('everyone'),
+  hiddenWords: text('hidden_words').array().notNull().default(sql`'{}'::text[]`),
+  screenTimeMinutes: integer('screen_time_minutes').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, (table) => [
+  check('buzzly_member_settings_message_policy', sql`${table.messagePolicy} in ('everyone', 'following', 'nobody')`),
+  check('buzzly_member_settings_screen_time', sql`${table.screenTimeMinutes} in (0, 30, 60, 120)`),
+  check('buzzly_member_settings_hidden_words', sql`cardinality(${table.hiddenWords}) <= 50`),
 ])
