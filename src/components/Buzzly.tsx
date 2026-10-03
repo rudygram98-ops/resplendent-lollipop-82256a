@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
-  acceptInvite, AuthError, getSettings, getUser, handleAuthCallback, login, logout,
+  acceptInvite, AuthError, getSettings, getUser, handleAuthCallback, login,
   oauthLogin, onAuthChange, requestPasswordRecovery, signup, updateUser,
 } from '@netlify/identity'
 import type { Settings, User } from '@netlify/identity'
 import {
   ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, CheckCircle2,
-  Eye, EyeOff, Film, Heart, ImagePlus, LockKeyhole, LogOut, Mail, MessageCircle,
+  Film, Heart, ImagePlus, LockKeyhole, Mail, MessageCircle,
   Send, ShieldCheck, Sparkles, UserRound, UsersRound, X, Zap,
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import { authErrorMessage } from '@/lib/auth'
+import Field from '@/components/Field'
 import SocialFeed from '@/components/SocialFeed'
 
 type AuthMode = 'login' | 'signup' | 'forgot' | 'reset' | 'invite'
@@ -36,29 +36,6 @@ function CommunityPreview() {
   </div>
 }
 
-function Field({ label, name, value, onChange, icon: Icon, type = 'text', placeholder, error, autoComplete, disabled, minLength, maxLength }: {
-  label: string
-  name: string
-  value: string
-  onChange: (value: string) => void
-  icon: LucideIcon
-  type?: string
-  placeholder: string
-  error?: string
-  autoComplete?: string
-  disabled?: boolean
-  minLength?: number
-  maxLength?: number
-}) {
-  const [visible, setVisible] = useState(false)
-  const password = type === 'password'
-  return <div className="field">
-    <label htmlFor={name}>{label}</label>
-    <div className={`input-wrap ${error ? 'invalid' : ''}`}><Icon size={18} strokeWidth={1.7} /><input id={name} name={name} value={value} onChange={(event) => onChange(event.target.value)} type={password && visible ? 'text' : type} placeholder={placeholder} autoComplete={autoComplete} disabled={disabled} required minLength={minLength} maxLength={maxLength} aria-invalid={Boolean(error)} aria-describedby={error ? `${name}-error` : undefined} />{password && <button type="button" className="visibility-button" onClick={() => setVisible(!visible)} aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`} aria-pressed={visible} disabled={disabled}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button>}</div>
-    {error && <p className="field-error" id={`${name}-error`}>{error}</p>}
-  </div>
-}
-
 export function Buzzly() {
   const [mode, setMode] = useState<AuthMode>('login')
   const [user, setUser] = useState<User | null>(null)
@@ -74,8 +51,7 @@ export function Buzzly() {
   const [notice, setNotice] = useState('')
   const [emailSent, setEmailSent] = useState<'signup' | 'forgot' | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
-  const [editingName, setEditingName] = useState(false)
-  const [accountOpen, setAccountOpen] = useState(false)
+  const [feedNotice, setFeedNotice] = useState('')
   const inviteToken = useRef<string | null>(null)
   const helpDialog = useRef<HTMLDialogElement>(null)
   const initializingPromise = useRef<ReturnType<typeof handleAuthCallback> | null>(null)
@@ -88,12 +64,15 @@ export function Buzzly() {
       setUser(currentUser)
       if (event === 'recovery') setMode('reset')
       if (event === 'logout') {
-        setAccountOpen(false)
         setMode('login')
         setEmailSent(null)
-        setEditingName(false)
+        setName('')
+        setEmail('')
         setPassword('')
         setConfirm('')
+        setError('')
+        setFeedNotice('')
+        setNotice('You’re signed out. See you around!')
       }
     })
     async function initialize() {
@@ -111,7 +90,8 @@ export function Buzzly() {
           const currentUser = callback?.user ?? await getUser()
           if (!active) return
           setUser(currentUser)
-          if (callback?.type === 'confirmation') setNotice('Email confirmed. Welcome to your corner of Buzzly!')
+          if (callback?.type === 'confirmation') setFeedNotice('Email confirmed. Welcome to your corner of Buzzly!')
+          if (callback?.type === 'email_change') setFeedNotice(currentUser?.email ? `Your email is now ${currentUser.email}.` : 'Your email address is updated.')
         }
       } catch {
         if (active) {
@@ -176,7 +156,7 @@ export function Buzzly() {
       } else if (mode === 'reset') {
         setUser(await updateUser({ password }))
         setMode('login')
-        setNotice('Your password is updated. You’re signed in and ready to go.')
+        setFeedNotice('Your password is updated. You’re signed in and ready to go.')
       } else if (mode === 'invite') {
         if (!inviteToken.current) {
           setError('This invitation is no longer valid. Please request a new invitation.')
@@ -188,51 +168,6 @@ export function Buzzly() {
       }
       setPassword('')
       setConfirm('')
-    } catch (caught) {
-      setError(authErrorMessage(caught))
-    } finally {
-      setBusy(false)
-      submitLock.current = false
-    }
-  }
-
-  async function handleLogout() {
-    if (submitLock.current) return
-    submitLock.current = true
-    setBusy(true)
-    setError('')
-    try {
-      await logout()
-      setUser(null)
-      setMode('login')
-      setEditingName(false)
-      setName('')
-      setEmail('')
-      setNotice('You’re signed out. See you around!')
-    } catch (caught) {
-      setUser(await getUser())
-      setError(authErrorMessage(caught))
-    } finally {
-      submitLock.current = false
-      setBusy(false)
-    }
-  }
-
-  async function saveName(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (submitLock.current) return
-    if (name.trim().length < 2) {
-      setFieldErrors({ name: 'Use at least 2 characters for your name.' })
-      return
-    }
-    submitLock.current = true
-    setBusy(true)
-    setError('')
-    try {
-      setUser(await updateUser({ data: { full_name: name.trim() } }))
-      setEditingName(false)
-      setNotice('Your display name is updated.')
-      setFieldErrors({})
     } catch (caught) {
       setError(authErrorMessage(caught))
     } finally {
@@ -254,8 +189,7 @@ export function Buzzly() {
   }
 
   const signedIn = Boolean(user) && mode !== 'reset' && mode !== 'invite'
-  if (!initializing && signedIn && user && !accountOpen) return <SocialFeed key={user.id} user={user} onAccount={() => setAccountOpen(true)} />
-  const displayName = user?.name || 'friend'
+  if (!initializing && signedIn && user) return <SocialFeed key={user.id} user={user} initialNotice={feedNotice} onUserChange={setUser} />
   const changingPassword = mode === 'reset' || mode === 'invite'
   const title = mode === 'signup' ? 'Your people are out there.' : mode === 'forgot' ? 'Let’s get you back in.' : mode === 'reset' ? 'A fresh start.' : mode === 'invite' ? 'You’re invited.' : 'Welcome back.'
   const subtitle = mode === 'signup' ? 'Make yourself at home. Create your Buzzly account.' : mode === 'forgot' ? 'We’ll send you a link to reset your password.' : changingPassword ? 'Choose a new password to make this space yours.' : 'Good to see you. Let’s get you back to the buzz.'
@@ -273,16 +207,7 @@ export function Buzzly() {
       </section>
       <section className="auth-side" aria-label={signedIn ? 'Your account' : 'Sign in or create an account'}>
         <div className={`auth-card ${mode === 'signup' ? 'signup-card' : ''}`}>
-          {initializing ? <div className="auth-loading" role="status" aria-live="polite"><div className="skeleton skeleton-tabs" /><div className="skeleton skeleton-title" /><div className="skeleton skeleton-line" /><div className="skeleton skeleton-input" /><div className="skeleton skeleton-input" /><div className="skeleton skeleton-button" /><p>Getting your space ready…</p></div> : signedIn ? <>
-            <button className="back-button" onClick={() => setAccountOpen(false)}><ArrowLeft size={16} />Back to the buzz</button>
-            <div className="account-topline"><span className="account-label"><CheckCircle2 size={16} /> YOU’RE PART OF THE BUZZ</span><Sparkles size={22} /></div>
-            <div className="account-avatar">{displayName.slice(0, 2).toUpperCase()}</div><h2 className="account-heading">Hey, {displayName}<span>.</span></h2><p className="auth-description">Your corner of Buzzly is ready.</p>
-            {notice && <div className="notice" role="status"><CheckCircle2 size={18} /><span>{notice}</span></div>}
-            {error && <div className="error-message" role="alert">{error}</div>}
-            <div className="account-details"><div><span><Mail size={16} /> Email address</span><strong>{user?.email || 'Not provided'}</strong></div><div><span><UserRound size={16} /> Display name</span><strong>{displayName}</strong></div><div><span><ShieldCheck size={16} /> Account status</span><strong className="verified-status"><Check size={14} /> {user?.confirmedAt ? 'Email verified' : 'Signed in'}</strong></div></div>
-            {editingName ? <form onSubmit={saveName} className="profile-form"><Field label="Display name" name="profile-name" icon={UserRound} value={name} onChange={setName} placeholder="Your name" autoComplete="name" minLength={2} maxLength={60} error={fieldErrors.name} disabled={busy} /><div className="profile-actions"><button type="button" className="secondary-button" disabled={busy} onClick={() => { setEditingName(false); setFieldErrors({}) }}>Cancel</button><button className="primary-button" disabled={busy} type="submit">{busy ? 'Saving…' : 'Save name'}<Check size={16} /></button></div></form> : <button className="primary-button" disabled={busy} onClick={() => { setName(user?.name || ''); setEditingName(true); setNotice(''); setError('') }}>Edit your profile<ArrowRight size={18} /></button>}
-            <button className="signout-button" onClick={() => void handleLogout()} disabled={busy}><LogOut size={16} />{busy ? 'Please wait…' : 'Sign out'}</button>
-          </> : emailSent ? <div className="email-state"><span className="email-state-icon"><Send size={29} strokeWidth={1.5} /></span><span className="eyebrow">ONE LITTLE STEP</span><h2>Check your inbox<span>.</span></h2><p>{emailSent === 'signup' ? 'Your account is created! Confirm your email to join the buzz.' : 'If an account exists for this email, we’ve sent a password reset link.'}</p><div className="email-address"><Mail size={17} /><strong>{email.trim()}</strong></div><p className="email-tip">Open the link in your email to continue. Can’t find it? Check your spam folder, too.</p><button className="primary-button" onClick={() => switchMode('login')}>Back to sign in<ArrowRight size={18} /></button>{emailSent === 'forgot' && <button className="text-button" onClick={() => switchMode('forgot')}>Try a different email</button>}</div> : <>
+          {initializing ? <div className="auth-loading" role="status" aria-live="polite"><div className="skeleton skeleton-tabs" /><div className="skeleton skeleton-title" /><div className="skeleton skeleton-line" /><div className="skeleton skeleton-input" /><div className="skeleton skeleton-input" /><div className="skeleton skeleton-button" /><p>Getting your space ready…</p></div> : emailSent ? <div className="email-state"><span className="email-state-icon"><Send size={29} strokeWidth={1.5} /></span><span className="eyebrow">ONE LITTLE STEP</span><h2>Check your inbox<span>.</span></h2><p>{emailSent === 'signup' ? 'Your account is created! Confirm your email to join the buzz.' : 'If an account exists for this email, we’ve sent a password reset link.'}</p><div className="email-address"><Mail size={17} /><strong>{email.trim()}</strong></div><p className="email-tip">Open the link in your email to continue. Can’t find it? Check your spam folder, too.</p><button className="primary-button" onClick={() => switchMode('login')}>Back to sign in<ArrowRight size={18} /></button>{emailSent === 'forgot' && <button className="text-button" onClick={() => switchMode('forgot')}>Try a different email</button>}</div> : <>
             {(mode === 'login' || mode === 'signup') ? <div className="auth-tabs" aria-label="Choose account action"><button className={mode === 'login' ? 'active' : ''} aria-pressed={mode === 'login'} onClick={() => switchMode('login')} disabled={busy}>Sign in</button><button className={mode === 'signup' ? 'active' : ''} aria-pressed={mode === 'signup'} onClick={() => switchMode('signup')} disabled={busy}>Create account</button></div> : !changingPassword && <button className="back-button" onClick={() => switchMode('login')} disabled={busy}><ArrowLeft size={16} /> Back to sign in</button>}
             <div className="form-heading"><div className="form-icon"><Zap size={20} fill="currentColor" /></div><h2>{title}</h2><p className="auth-description">{subtitle}</p></div>
             {error && <div className="error-message" role="alert">{error}</div>}
