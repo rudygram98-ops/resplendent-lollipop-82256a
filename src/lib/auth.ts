@@ -21,6 +21,9 @@ export function authErrorMessage(error: unknown): string {
     if (error.status === 403) {
       return 'This action is not available for your account. Please try again later.'
     }
+    if (error.status === 404 || (error.status !== undefined && error.status >= 500)) {
+      return 'Account services are not available yet. Please try again shortly.'
+    }
     if (error.status === 422) {
       return 'Please check your details. Your email must be valid and your password must meet the requirements.'
     }
