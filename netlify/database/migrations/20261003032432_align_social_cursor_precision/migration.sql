@@ -1,0 +1,2 @@
+ALTER TABLE "buzzly_comments" ALTER COLUMN "created_at" SET DATA TYPE timestamp(3) with time zone USING "created_at"::timestamp(3) with time zone;--> statement-breakpoint
+ALTER TABLE "buzzly_posts" ALTER COLUMN "created_at" SET DATA TYPE timestamp(3) with time zone USING "created_at"::timestamp(3) with time zone;
