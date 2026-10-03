@@ -15,6 +15,7 @@ import { authErrorMessage } from '@/lib/auth'
 import { clearLocalDrafts, readLocal, writeLocal } from '@/lib/storage'
 import SocialFeed from '@/components/SocialFeed'
 import ProfileSettings from '@/components/ProfileSettings'
+import ThemeToggle from '@/components/ThemeToggle'
 
 type AuthMode = 'login' | 'signup' | 'forgot' | 'reset' | 'invite'
 type FieldErrors = Partial<Record<'name' | 'email' | 'password' | 'confirm', string>>
@@ -245,7 +246,7 @@ export function Buzzly() {
   const googleEnabled = settings?.providers.google && (mode === 'login' || mode === 'signup') && (mode !== 'signup' || !settings.disableSignup)
 
   return <div className="site-shell">
-    <header className="site-header"><Brand /><span className="header-tagline">A little less noise. A lot more you.</span><div className="header-action">{signedIn ? <span className="session-label"><span /> You’re in</span> : <><span>{mode === 'signup' ? 'Already part of the buzz?' : 'New around here?'}</span><button onClick={() => switchMode(mode === 'signup' ? 'login' : 'signup')} disabled={busy || initializing}>{mode === 'signup' ? 'Sign in' : 'Join the buzz'}<ArrowUpRight size={16} /></button></>}</div></header>
+    <header className="site-header"><Brand /><span className="header-tagline">A little less noise. A lot more you.</span><div className="header-action"><ThemeToggle />{signedIn ? <span className="session-label"><span /> You’re in</span> : <><span>{mode === 'signup' ? 'Already part of the buzz?' : 'New around here?'}</span><button onClick={() => switchMode(mode === 'signup' ? 'login' : 'signup')} disabled={busy || initializing}>{mode === 'signup' ? 'Sign in' : 'Join the buzz'}<ArrowUpRight size={16} /></button></>}</div></header>
     <main className="main-grid">
       <section className="story-side">
         <div className="eyebrow"><span /> YOUR LITTLE CORNER OF THE INTERNET</div>
