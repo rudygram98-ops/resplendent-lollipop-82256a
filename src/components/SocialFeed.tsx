@@ -3,13 +3,14 @@ import type { FormEvent } from 'react'
 import type { User } from '@netlify/identity'
 import {
   ArrowDown, ArrowRight, ArrowUpRight, Bookmark, Check, ChevronLeft, Film, Heart, Home,
-  ImagePlus, MessageCircle, Plus, RefreshCw, Search, Send, Share2, Sparkles,
+  ImagePlus, MessageCircle, Plus, RefreshCw, Send, Share2, Sparkles,
   Trash2, UserRound, UsersRound, X, Zap,
 } from 'lucide-react'
 import { initials, socialRequest } from '@/lib/social'
 import { readLocal, writeLocal } from '@/lib/storage'
 import type { FeedView, SocialComment, SocialPost } from '@/lib/social'
 import DirectMessaging from '@/components/DirectMessaging'
+import SearchBar from '@/components/SearchBar'
 import { messagingRequest } from '@/lib/messaging'
 
 type FeedPage = { posts: SocialPost[]; nextCursor: string | null }
@@ -131,6 +132,7 @@ function PostCard({ post, user, onChange, onDelete }: {
 export default function SocialFeed({ user, onAccount }: { user: User; onAccount: () => void }) {
   const [view, setView] = useState<FeedView>('all')
   const [messagingOpen, setMessagingOpen] = useState(false)
+  const [directorySearch, setDirectorySearch] = useState('')
   const [page, setPage] = useState<FeedPage>({ posts: [], nextCursor: null })
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -261,7 +263,7 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
         <button className={!messagingOpen && view === 'all' ? 'selected' : ''} aria-current={!messagingOpen && view === 'all' ? 'page' : undefined} onClick={() => selectView('all')}><Home size={21} />Home feed</button>
         <button className={!messagingOpen && view === 'photos' ? 'selected' : ''} aria-current={!messagingOpen && view === 'photos' ? 'page' : undefined} onClick={() => selectView('photos')}><ImagePlus size={21} />Moments<span className="nav-tag">PHOTOS</span></button>
         <button className={!messagingOpen && view === 'clips' ? 'selected' : ''} aria-current={!messagingOpen && view === 'clips' ? 'page' : undefined} onClick={() => selectView('clips')}><Film size={21} />Clips</button>
-        <button className={messagingOpen ? 'selected' : ''} aria-current={messagingOpen ? 'page' : undefined} onClick={() => setMessagingOpen(true)}><Send size={21} />Messages</button>
+        <button className={messagingOpen ? 'selected' : ''} aria-current={messagingOpen ? 'page' : undefined} onClick={() => { setDirectorySearch(''); setMessagingOpen(true) }}><Send size={21} />Messages</button>
         <button className={!messagingOpen && view === 'saved' ? 'selected' : ''} aria-current={!messagingOpen && view === 'saved' ? 'page' : undefined} onClick={() => selectView('saved')}><Bookmark size={21} />Saved</button>
         <button className={!messagingOpen && view === 'mine' ? 'selected' : ''} aria-current={!messagingOpen && view === 'mine' ? 'page' : undefined} onClick={() => selectView('mine')}><UserRound size={21} />My posts</button>
       </nav>
@@ -271,9 +273,9 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
     </aside>
 
     <main className="social-main">
-      {messagingOpen ? <DirectMessaging user={user} onAccount={onAccount} /> : <>
+      {messagingOpen ? <DirectMessaging user={user} onAccount={onAccount} initialQuery={directorySearch} /> : <>
       <header className="feed-header"><div><span className="eyebrow"><span /> THE BUZZ STARTS HERE</span><h1>{heading}</h1><p>Your thoughts. Your moments. Your kind of people.</p></div><button className="icon-button mobile-account" onClick={onAccount} aria-label="Open account settings"><UserRound size={22} /></button></header>
-      <form className="feed-search" role="search" onSubmit={(event) => { event.preventDefault(); setSharedPost(null); setQuery(queryInput.trim()); window.history.replaceState(null, '', '/') }}><Search size={18} /><label className="sr-only" htmlFor="feed-search">Search posts and people by name</label><input id="feed-search" value={queryInput} onChange={(event) => setQueryInput(event.target.value)} maxLength={100} placeholder="Find a thought, a moment, a name…" /><button type="submit">Search</button></form>
+      <SearchBar value={queryInput} onChange={setQueryInput} onSearch={(term) => { setSharedPost(null); setQuery(term); window.history.replaceState(null, '', '/') }} onPost={(id) => { setView('all'); setQuery(''); setSharedPost(id); window.history.replaceState(null, '', `/?post=${encodeURIComponent(id)}`) }} onMembers={(term) => { setDirectorySearch(term); setMessagingOpen(true) }} />
 
       <form className="post-composer" onSubmit={publish} aria-busy={publishing}>
         <div className="composer-top"><span className="social-avatar">{initials(name)}</span><div><label htmlFor="post-content">Got something on your mind, {name.split(' ')[0]}?</label><textarea id="post-content" ref={composer} value={content} onChange={(event) => setContent(event.target.value)} placeholder="A thought. A moment. A little bit of you." maxLength={2000} disabled={publishing} rows={3} /></div></div>

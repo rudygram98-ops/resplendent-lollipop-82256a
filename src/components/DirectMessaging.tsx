@@ -24,8 +24,8 @@ function errorMessage(failure: unknown) {
   return failure instanceof Error ? failure.message : 'Something went wrong. Please try again.'
 }
 
-export default function DirectMessaging({ user, onAccount }: { user: User; onAccount: () => void }) {
-  const [panel, setPanel] = useState<Panel>('chats')
+export default function DirectMessaging({ user, onAccount, initialQuery = '' }: { user: User; onAccount: () => void; initialQuery?: string }) {
+  const [panel, setPanel] = useState<Panel>(initialQuery ? 'members' : 'chats')
   const [ready, setReady] = useState(false)
   const [sessionError, setSessionError] = useState('')
   const [sessionRetry, setSessionRetry] = useState(0)
@@ -39,7 +39,7 @@ export default function DirectMessaging({ user, onAccount }: { user: User; onAcc
   const [directoryMore, setDirectoryMore] = useState(false)
   const [directoryError, setDirectoryError] = useState('')
   const [directoryRefresh, setDirectoryRefresh] = useState(0)
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(initialQuery)
   const [acting, setActing] = useState(false)
   const [selected, setSelected] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<DirectMessage[]>([])
