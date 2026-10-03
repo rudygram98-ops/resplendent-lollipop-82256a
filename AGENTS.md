@@ -19,9 +19,11 @@ Buzzly is a social experience built with React 19, TypeScript, TanStack Start, N
 - `netlify/functions/social.mts` validates Identity sessions and authorizes all community and media operations server-side.
 - `db/schema.ts` defines posts, likes, private bookmarks, and comments; Drizzle migrations live in `netlify/database/migrations` and are applied by Netlify during deployment.
 - The messaging schema stores directory display names, private follow relationships, unique participant pairs, and messages with idempotent send identifiers. A new forward-only migration adds these tables without modifying applied migrations.
-- `src/lib/storage.ts` wraps LocalStorage for non-sensitive conveniences only: the last-used email, per-user post drafts, and the per-user daily usage counter for the time reminder, which are cleared on sign-out. Never store passwords, tokens, or account records there.
+- `src/lib/storage.ts` wraps LocalStorage for non-sensitive conveniences only: the last-used email, the theme preference, per-user post drafts, and the per-user daily usage counter for the time reminder, which are cleared on sign-out. Never store passwords, tokens, or account records there.
 - `src/lib/auth.ts` maps authentication errors to safe, actionable messages without exposing raw service responses.
 - `src/styles.css` defines the responsive dark-and-rose design, form states, and reduced-motion support.
+- `src/theme-light.css` holds the light theme as `html.light` overrides of every color in `src/styles.css` (same hues, inverted lightness, deeper rose accents). Whenever a color is added or changed in `src/styles.css`, add the matching light override. Avatars intentionally keep their pastel colors in both themes.
+- `src/components/ThemeToggle.tsx` and `src/lib/theme.ts` switch between dark (default) and light. The choice is stored in LocalStorage (`buzzly:theme`), applied by an inline head script before first paint to avoid a flash, synced across tabs, and kept after sign-out. The toggle appears in the landing header, the signed-in sidebar, and the mobile feed header.
 - `public/images/` contains the static scenic image used in the clearly labeled preview, served through Netlify Image CDN.
 - `.netlify/features/netlify-identity` enables the Identity service on deployment.
 

@@ -1,0 +1,256 @@
+html.light .dm-privacy { color: #534557 }
+html.light .dm-workspace { background: #f2f1f5; border: 1px solid #dcd5de; box-shadow: 0 15px 45px #45396a0d }
+html.light .dm-sidebar { border-right: 1px solid #dcd5de; background: #f0eef3 }
+html.light .dm-panel-switch button { color: #4a3852 }
+html.light .dm-panel-switch button.active { background: #ab214517; color: #ba123d; border-color: #ab214525 }
+html.light .dm-search { border: 1px solid #c3b7ca; color: #534557 }
+html.light .dm-search:focus-within { border-color: #a22a4e }
+html.light .dm-search input { color: #251927 }
+html.light .dm-list-heading h2 { color: #4a3852 }
+html.light .dm-conversation:hover { background: #1a1a1a04 }
+html.light .dm-conversation.selected { background: #ab21450e; border-color: #ab214528 }
+html.light .dm-conversation strong { color: #311b2d }
+html.light .dm-conversation time { color: #534557 }
+html.light .dm-conversation > svg { color: #6d3d54 }
+html.light .dm-member { border-bottom: 1px solid #1a1a1a08 }
+html.light .dm-member strong { color: #311b2d }
+html.light .dm-member-actions button { background: #e7e2ea; border: 1px solid #b8a4bf; color: #85476c }
+html.light .dm-member-actions button.following { color: #334e2c; border-color: #334e2c30 }
+html.light .dm-member-actions button:last-child { color: #ba123d; background: #ab21450a }
+html.light .dm-directory-note { color: #534557; border-top: 1px solid #dcd5de }
+html.light .dm-list-empty { color: #633e5b }
+html.light .dm-list-empty h3 { color: #352032 }
+html.light .dm-list-empty p { color: #534557 }
+html.light .dm-thread { background: radial-gradient(ellipse at top right, #8d456910, transparent 60%), #f4f2f6 }
+html.light .dm-thread-header { border-bottom: 1px solid #dcd5de }
+html.light .dm-thread-header > div > span { color: #534557 }
+html.light .dm-message-list { scrollbar-color: #b69db8 transparent }
+html.light .dm-sender { color: #47354c }
+html.light .dm-message p { background: #e8e4ec; border: 1px solid #d0c3d4; color: #2c1a2e }
+html.light .dm-message time { color: #534557 }
+html.light .dm-message.outgoing p { background: #99335a; border-color: #99335a; color: #eadce5 }
+html.light .dm-composer { border-top: 1px solid #dcd5de }
+html.light .dm-composer > div { border: 1px solid #b8a4bf; background: #ede9f1 }
+html.light .dm-composer > div:focus-within { border-color: #a22a4e }
+html.light .dm-composer input { color: #251927 }
+html.light .dm-composer button { background: #99335a; color: #eadce5 }
+html.light .dm-composer > p { color: #534557 }
+html.light .dm-composer > p.social-error { color: #ba123d }
+html.light .dm-welcome-icon { color: #9b315d; background: #99335a13; border: 1px solid #99335a25 }
+html.light .dm-welcome h2 > span { color: #99335a }
+html.light .dm-welcome p, html.light .dm-thread-empty p { color: #534557 }
+html.light .dm-thread-empty { color: #633e5b }
+html.light .dm-thread-empty h3 { color: #352032 }
+html.light .dm-footer { color: #534557 }
+html.light .direct-messaging button:focus-visible, html.light .dm-message-list:focus-visible { outline: 2px solid #a22a4e }
+html.light .settings-tabs button { color: #534b5b }
+html.light .settings-tabs button:hover { background: #1a1a1a05; color: #251927 }
+html.light .settings-tabs button.active { background: #ab214513; color: #ba123d; border-color: #ab21451a }
+html.light .settings-panel { background: #f2f1f5; border: 1px solid #dcd5de; box-shadow: 0 15px 45px #45396a0d }
+html.light .setting-card, html.light .setting-group { background: #f0eef3; border: 1px solid #dcd5de }
+html.light .setting-card strong, html.light .setting-card label, html.light .setting-group label { color: #311b2d }
+html.light .setting-card p, html.light .setting-group p { color: #534557 }
+html.light .setting-group select, html.light .setting-group textarea { background: #ede9f1; border: 1px solid #b8a4bf; color: #251927 }
+html.light .setting-group select:focus-visible, html.light .setting-group textarea:focus-visible, html.light .setting-switch:focus-visible { outline: 2px solid #a22a4e }
+html.light .setting-group small { color: #655f6e }
+html.light .soon-badge, html.light .always-badge { color: #422c3e; background: #1a1a1a0a; border: 1px solid #1a1a1a12 }
+html.light .always-badge { color: #334e2c; border-color: #334e2c30; background: #334e2c0c }
+html.light .setting-switch { background: #e7e2ea; border: 1px solid #b8a4bf }
+html.light .setting-switch::after { background: #79697f }
+html.light .setting-switch:checked { background: #99335a; border-color: #99335a }
+html.light .setting-switch:checked::after { background: #eadce5 }
+html.light .screen-time-reminder { border: 1px solid #ab214530; background: #ab21450d; color: #ba123d }
+html.light .screen-time-reminder p { color: #352032 }
+html.light .sidebar-caption { color: #706778 }
+html.light .social-sidebar nav button { color: #534b5b }
+html.light .social-sidebar nav button:hover { background: #1a1a1a05; color: #251927 }
+html.light .social-sidebar nav button.selected { background: #ab214513; color: #ba123d; border-color: #ab21451a }
+html.light .sidebar-note { color: #674a5d }
+html.light .sidebar-note strong { color: #3a2a3a }
+html.light .sidebar-theme { border: 1px solid #e1dfe5; color: #48384b }
+html.light .sidebar-theme:hover { color: #ba123d; border-color: #b8a4bf }
+html.light .sidebar-account { border: 1px solid #e1dfe5; background: #f1f1f4 }
+html.light .sidebar-account small { color: #655f6e }
+html.light .sidebar-account > svg { color: #655f6e }
+html.light .feed-header p { color: #544c5b }
+html.light .feed-search { border: 1px solid #e1dfe5; background: #f1f1f4; color: #655f6e }
+html.light .feed-search input { color: #251927 }
+html.light .feed-search:focus-within { border-color: #8c465a }
+html.light .feed-search button { color: #48384b }
+html.light .post-composer { background: #f0eef3; border: 1px solid #dcd5de; box-shadow: 0 8px 40px #45396a0b }
+html.light .composer-top label { color: #3d2c40 }
+html.light .composer-top textarea { color: #251927 }
+html.light .composer-top textarea:focus-visible { box-shadow: 0 2px #944860 }
+html.light .composer-top textarea::placeholder { color: #7f758a }
+html.light .composer-actions { border-top: 1px solid #1a1a1a09 }
+html.light .media-button { color: #593c53 }
+html.light .media-button:hover { color: #ba123d }
+html.light .character-count { color: #7c7283 }
+html.light .composer-privacy { color: #7d7283 }
+html.light .attachment-preview { border: 1px solid #dcd5de; background: #f4f3f7 }
+html.light .attachment-preview img, html.light .attachment-preview video { background: #f6f5f8 }
+html.light .attachment-preview .remove-attachment { background: #eeebf1; border: 1px solid #bdadbc }
+html.light .attachment-preview label span { color: #655f6e }
+html.light .attachment-preview input { border: 1px solid #e1dfe5; background: #f1f1f4; color: #251927 }
+html.light .attachment-preview small { color: #655f6e }
+html.light .social-notice { color: #32472e }
+html.light .social-error { color: #ba123d }
+html.light .feed-toolbar { border-bottom: 1px solid #e1dfe5 }
+html.light .feed-tabs button { color: #655f6e }
+html.light .feed-tabs button.active { border-bottom-color: #ab2145; color: #251927 }
+html.light .current-feed { color: #ba123d }
+html.light .icon-button { color: #544c5b }
+html.light .icon-button:hover { color: #ba123d; background: #ab214510 }
+html.light .social-post { border: 1px solid #e1dfe5; background: #f1f1f4 }
+html.light .post-header time { color: #655f6e }
+html.light .post-media { background: #f5f4f8 }
+html.light .post-video { background: #f5f4f8 }
+html.light .post-video p { color: #554959 }
+html.light .post-actions { border-top: 1px solid #1a1a1a06 }
+html.light .post-actions button { color: #5e5062 }
+html.light .post-actions button:hover, html.light .post-actions button.is-active { color: #ba123d }
+html.light .post-comments { border-top: 1px solid #e1dfe5 }
+html.light .social-muted { color: #655f6e }
+html.light .social-comment time { color: #655f6e }
+html.light .comment-form { background: #eceaf0; border: 1px solid #dfdae4 }
+html.light .comment-form:focus-within { border-color: #8c465a }
+html.light .comment-form input { color: #251927 }
+html.light .comment-form input::placeholder { color: #655f6e }
+html.light .comment-form .icon-button { color: #ba123d }
+html.light .social-dialog { border: 1px solid #bfa8ba; background: #eeebf1; color: #251927 }
+html.light .social-dialog::backdrop { background: #47396a43 }
+html.light .social-dialog p { color: #544c5b }
+html.light .feed-empty { border: 1px dashed #d4c3cf; background: radial-gradient(ellipse at 50% 20%, #ab214509, transparent 60%) }
+html.light .empty-art { color: #a82444 }
+html.light .empty-art > svg { border: 1px solid #be9bb3; background: #ab21450a }
+html.light .empty-art span { background: #c7a9be }
+html.light .feed-empty p { color: #544c5b }
+html.light .feed-failure { border: 1px solid #b38095; background: #ab214509 }
+html.light .feed-failure p { color: #ba123d }
+html.light .feed-footer { color: #887c92 }
+html.light .community-note { border: 1px solid #ceb5c4; background: radial-gradient(ellipse at 100% 0, #c37aa225, transparent 70%), #f2eef3 }
+html.light .note-orbit:before, html.light .note-orbit:after { border: 1px solid #87425635 }
+html.light .note-orbit > svg:first-child { color: #ba123d; background: #d1aec0 }
+html.light .note-orbit > svg:last-child { color: #89435e }
+html.light .community-note h2 span { color: #ba123d }
+html.light .community-note p { color: #5d4959 }
+html.light .community-note-footer { border-top: 1px solid #1a1a1a09; color: #583b4e }
+html.light .community-note-footer > span { background: #8d3f53 }
+html.light .community-guide h3 svg { color: #763950 }
+html.light .community-guide p { color: #655f6e }
+html.light .community-guide button { color: #854764 }
+html.light .right-footer { color: #917f94 }
+html.light .community-search-results { border: 1px solid #d4c3d0; background: #eeebf1 }
+html.light .community-search-results > section + section { border-top: 1px solid #dcd5de }
+html.light .community-search-results h2 { color: #a82444 }
+html.light .community-search-results p { color: #544c5b }
+html.light .community-search-results li button { color: #322133 }
+html.light .community-search-results li button:hover { background: #e6dfe8; border-color: #bd9aad }
+html.light .community-search-results li button:focus-visible { outline: 2px solid #a82444 }
+html.light .community-search-results li button span { color: #544c5b }
+html.light .community-search-results .search-topics button { border-color: #bd9aad; color: #a82444 }
+html.light .search-status { color: #48384b }
+@media (max-width: 620px) { html.light .social-sidebar { background: #f4f2f6f5; border-top: 1px solid #dcd5de }
+html.light .mobile-account { border: 1px solid #dcd5de; background: #eeebf1 }
+}
+html.light { color-scheme: light; --background: #f6f5f8; --surface: #f1f1f4; --border: #e1dfe5; --muted: #655f6e; --text: #251927; --accent: #ab2145; --accent-light: #ba123d }
+html.light ::selection { background: #ab546a }
+html.light .site-shell { background: radial-gradient(ellipse at 23% 43%, #ebd4e220, transparent 42%) }
+html.light .site-header { border-bottom: 1px solid #1a1a1a09 }
+html.light .brand-icon { background: linear-gradient(140deg, #ad1f3c, #983d67) }
+html.light .header-tagline { color: #726d7a }
+html.light .header-action button { border: 1px solid #dcced5; background: #f1edf1 }
+html.light .header-action button:hover { background: #ebdee5 }
+html.light .header-action .theme-toggle { color: #48384b }
+html.light .eyebrow { color: #5b4956 }
+html.light .eyebrow > span { box-shadow: 0 0 0 4px #ab214512 }
+html.light .hero-description { color: #544c5b }
+html.light .orbit { border: 1px solid #1a1a1a08 }
+html.light .moment-card { background: #eae7ed; border: 1px solid #d8cad5; box-shadow: 0 18px 35px #45396a27 }
+html.light .moment-author div > span { color: #5a4f63 }
+html.light .sample-badge { color: #5c5165; border: 1px solid #baaabe }
+html.light .moment-content > div { color: #534557 }
+html.light .connection-card { border: 1px solid #bfa8ba; background: #e9e4e9; box-shadow: 0 12px 25px #45396a22 }
+html.light .connection-icon { background: #ab214516 }
+html.light .connection-card div > span { color: #554657 }
+html.light .connection-dot { background: #456034; box-shadow: 0 0 0 4px #4560340b }
+html.light .floating-spark { color: #a7253b }
+html.light .floating-heart { background: #e9d8e3; border: 1px solid #bb93a7; color: #a4284f; box-shadow: 0 8px 20px #45396a1c }
+html.light .small-note { color: #574d5d }
+html.light .small-note svg { color: #462f41 }
+html.light .feature-row { color: #5c5161 }
+html.light .feature-row svg { color: #8d3f61 }
+html.light .auth-card { border: 1px solid #ddd6df; background: linear-gradient(145deg, #efecf1, #f1f1f4 60%); box-shadow: 0 22px 60px #473d6613 }
+html.light .auth-tabs { border: 1px solid #e2dde5; background: #f4f3f6 }
+html.light .auth-tabs button { color: #625869 }
+html.light .auth-tabs button.active { background: #e8e0e7; border-color: #cbafbb; color: #ba123e; box-shadow: 0 1px 6px #49396a11 }
+html.light .auth-tabs button:not(.active):hover { color: #8f3d64 }
+html.light .form-icon { background: #ab21450f; border: 1px solid #ab21451c; color: #a5274f }
+html.light .auth-description { color: #61576a }
+html.light .field label { color: #36293f }
+html.light .input-wrap { border: 1px solid #d5ceda; background: #f4f3f766; color: #72647c }
+html.light .input-wrap:focus-within { border-color: #953758; box-shadow: 0 0 0 3px #ab21450b }
+html.light .input-wrap input { color: #281b30 }
+html.light .input-wrap input::placeholder { color: #867992 }
+html.light .input-wrap input:-webkit-autofill { -webkit-text-fill-color: #281b30; -webkit-box-shadow: 0 0 0 100px #f1eef3 inset; caret-color: #281b30 }
+html.light .visibility-button { color: #7c6e84 }
+html.light .visibility-button:hover { color: #a02c51 }
+html.light .forgot-row > span { color: #6b6076 }
+html.light .forgot-row button { color: #97355a }
+html.light .forgot-row button:hover { color: #ba123f }
+html.light .primary-button { border: 1px solid #b41848; background: linear-gradient(100deg, #a92349, #9f2d5a); color: #f7ebf2; box-shadow: 0 3px 12px #9d2f510d }
+html.light .primary-button:hover:not(:disabled) { background: #ab2150; box-shadow: 0 3px 20px #9d2f5118 }
+html.light .form-bottom { color: #6a5b71 }
+html.light .text-button { color: #9b3155 }
+html.light .text-button:hover { color: #ba1242 }
+html.light .card-footnote { border-top: 1px solid #e2dee6; color: #6c6176; background: #f7f6f91c }
+html.light .card-footnote svg { color: #5b4b67 }
+html.light .outside-card-note { color: #75687f }
+html.light .tiny-star { color: #65415d }
+html.light .site-footer { border-top: 1px solid #1a1a1a0b; color: #7d7587 }
+html.light .site-footer button { color: #53455c }
+html.light .site-footer button:hover { color: #9a325a }
+html.light .signup-note { color: #67576f }
+html.light .back-button { color: #584261 }
+html.light .back-button:hover { color: #98345a }
+html.light .error-message { background: #a6263f10; border: 1px solid #a6263f40; color: #ba1231 }
+html.light .notice { background: #3561370d; border: 1px solid #35613730; color: #29462a }
+html.light .invalid { border-color: #a02c44 }
+html.light .field-error { color: #ac2042 }
+html.light .button-spinner { border: 2px solid #f7ebf233; border-top-color: #f7ebf2 }
+html.light .email-state-icon { background: #9b315917; color: #a12b56; border: 1px solid #8c406325 }
+html.light .email-state > p { color: #584662 }
+html.light .email-address { border: 1px solid #d0c2d5; color: #8e3e64 }
+html.light .account-topline { color: #9d2f5a }
+html.light .account-details { border: 1px solid #d4cada }
+html.light .account-details > div { border-bottom: 1px solid #dad1de }
+html.light .account-details span { color: #5a4666 }
+html.light .account-details .verified-status { color: #3b5831 }
+html.light .signout-button { color: #4d375a }
+html.light .signout-button:hover { color: #a7254b }
+html.light .session-label > span { background: #3a562f }
+html.light .profile-settings { border-top: 1px solid #d0c2d5 }
+html.light .profile-settings .profile-hint { color: #4d375a }
+html.light .profile-photo-control label { color: #9d2f5a }
+html.light .profile-photo-control input { color: #4d375a }
+html.light .profile-photo-control input::file-selector-button { border: 1px solid #b8a4bf; background: #e5dee9; color: #9d2f5a }
+html.light .profile-photo-control p { color: #4d375a }
+html.light .profile-settings .field > input, html.light .profile-settings textarea { border: 1px solid #b8a4bf; background: #f0ecf2 }
+html.light .profile-optional { color: #4d375a }
+html.light .secondary-button { border: 1px solid #b8a4bf }
+html.light .secondary-button:hover { background: #e5dee9 }
+html.light .help-dialog { background: #f1eef3; border: 1px solid #b898ad }
+html.light .help-dialog::backdrop { background: #52396a42 }
+html.light .help-content h3 { color: #9c305b }
+html.light .help-content p { color: #513d5d }
+html.light .dialog-close { color: #573b66 }
+html.light .dialog-close:hover { background: #e3d9e8 }
+html.light .form-divider { color: #604f6a }
+html.light .form-divider > span { background: #d1c4d7 }
+html.light .google-button { background: #f0ebf3; border: 1px solid #b89fbf }
+html.light .google-button:hover { background: #e6dbeb }
+html.light .google-mark { color: #302134 }
+html.light .closed-signups { color: #50385b }
+html.light .closed-signups svg { color: #96365a }
+html.light .auth-loading p { color: #5c4169 }
+html.light .skeleton { background: linear-gradient(90deg, #e5ddea, #dacee0, #e5ddea) }

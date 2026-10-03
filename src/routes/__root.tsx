@@ -1,5 +1,7 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import '../styles.css'
+import '../theme-light.css'
+import { themeScript } from '@/lib/theme'
 
 const siteName = 'Buzzly — Social that hits different'
 const siteDescription = 'Your people. Your moments. Your buzz. Share thoughts, photos, and short clips with the Buzzly community.'
@@ -45,8 +47,9 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <HeadContent />
       </head>
       <body>

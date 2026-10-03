@@ -7,6 +7,7 @@ import {
   Trash2, UserRound, UsersRound, X, Zap,
 } from 'lucide-react'
 import { initials, socialRequest } from '@/lib/social'
+import ThemeToggle from '@/components/ThemeToggle'
 import { readLocal, writeLocal } from '@/lib/storage'
 import type { FeedView, SocialComment, SocialPost } from '@/lib/social'
 import DirectMessaging from '@/components/DirectMessaging'
@@ -281,13 +282,14 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
       </nav>
       {section === 'feed' && <button className="primary-button sidebar-create" onClick={() => { composer.current?.scrollIntoView({ block: 'center' }); composer.current?.focus() }}><Plus size={20} />Create a post</button>}
       <div className="sidebar-note"><Sparkles size={20} /><p>A little less noise.<br /><strong>A lot more you.</strong></p></div>
+      <ThemeToggle className="sidebar-theme" />
       <button className="sidebar-account" onClick={onAccount}><span className="social-avatar">{initials(name)}</span><span><strong>{name}</strong><small>Account & settings</small></span><ArrowRight size={17} /></button>
     </aside>
 
     <main className="social-main">
       {reminder.due && <div className="screen-time-reminder" role="status"><Sparkles size={17} /><p>You’ve reached your daily time on Buzzly. Maybe a good moment for a little break?</p><button className="text-button" onClick={reminder.dismiss}>Dismiss for today</button></div>}
       {section === 'messages' ? <DirectMessaging user={user} onAccount={onAccount} initialQuery={directorySearch} /> : section === 'settings' ? <AppSettings onAccount={onAccount} onSaved={(saved) => setScreenTimeMinutes(saved.screenTimeMinutes)} /> : <>
-      <header className="feed-header"><div><span className="eyebrow"><span /> THE BUZZ STARTS HERE</span><h1>{heading}</h1><p>Your thoughts. Your moments. Your kind of people.</p></div><button className="icon-button mobile-account" onClick={onAccount} aria-label="Open account settings"><UserRound size={22} /></button></header>
+      <header className="feed-header"><div><span className="eyebrow"><span /> THE BUZZ STARTS HERE</span><h1>{heading}</h1><p>Your thoughts. Your moments. Your kind of people.</p></div><div className="feed-header-actions"><ThemeToggle className="icon-button mobile-account" /><button className="icon-button mobile-account" onClick={onAccount} aria-label="Open account settings"><UserRound size={22} /></button></div></header>
       <SearchBar value={queryInput} onChange={setQueryInput} onSearch={(term) => { setSharedPost(null); setQuery(term); window.history.replaceState(null, '', '/') }} onPost={(id) => { setView('all'); setQuery(''); setSharedPost(id); window.history.replaceState(null, '', `/?post=${encodeURIComponent(id)}`) }} onMembers={(term) => { setDirectorySearch(term); setSection('messages') }} />
 
       <form className="post-composer" onSubmit={publish} aria-busy={publishing}>
