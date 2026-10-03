@@ -12,6 +12,8 @@ Signed-in members can publish up to 2,000 characters with an optional photo or s
 
 Uploads accept JPG, PNG, WebP, MP4, or WebM files up to 4 MB. Media descriptions are required for accessibility. Short videos use native playback controls and do not autoplay. Upload sizes and file signatures are validated server-side. Media is served through an authenticated endpoint with byte-range support for video playback. Every API operation validates the Identity session, mutations require a same-origin request, and only the author can delete a post. Deleting a post also removes its reactions and comments and requests deletion of the associated media.
 
+The community search bar shows live, case-insensitive matches grouped into users, posts, and topics. Users come from the registered member directory and open the directory for messaging or following. Post results open the selected post. Topics are hashtags derived from the first page of matching posts, not a separate trending-topic catalog, and selecting one filters the current feed. Suggestions show up to five users and five posts; the directory and feed retain their existing pagination for further results. Search is available only to signed-in members and does not use sample data.
+
 The schema lives in `db/schema.ts`, with Drizzle migrations in `netlify/database/migrations`. Netlify provisions the database and applies migrations during deployment; do not apply migrations manually. Preview database branches are separate from production. Uploaded media uses site-level Blob storage. Account and email flows still include password recovery, invitations, display-name editing, and sign-out.
 
 ## Run locally
