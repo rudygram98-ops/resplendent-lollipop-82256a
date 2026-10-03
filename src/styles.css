@@ -73,6 +73,40 @@
 @media (min-width: 621px) and (max-width: 900px) { .dm-workspace { grid-template-columns: 175px minmax(0, 1fr); } .dm-thread-header { padding: 12px; gap: 8px; } .dm-thread-header .social-avatar { display: none; } .dm-message-list { padding: 17px 11px; } .dm-message { max-width: 95%; } .dm-panel-switch button { font-size: 9px; } .dm-member-actions { flex-wrap: wrap; } .dm-member-actions button:last-child { margin-left: 0; } }
 @media (max-width: 620px) { .dm-workspace { display: block; height: min(660px, calc(100svh - 230px)); min-height: 380px; border-radius: 14px; } .dm-sidebar { height: 100%; border-right: 0; } .dm-thread { display: none; height: 100%; } .dm-thread-selected .dm-sidebar { display: none; } .dm-thread-selected .dm-thread { display: flex; } .dm-back { display: inline-grid; } .dm-conversation { padding: 15px 12px; } .dm-member { padding: 16px 12px; } .dm-member-actions { margin-left: 42px; } .dm-panel-switch button { font-size: 12px; } .dm-list-heading h2 { font-size: 12px; } .dm-conversation time { font-size: 10px; } .dm-directory-note { font-size: 10px; } .dm-member-actions button { font-size: 11px; padding: 8px 11px; } .dm-privacy { font-size: 9px; } .dm-message-list { padding: 18px 15px; } }
 
+.app-settings .feed-header { margin-bottom: 26px; }
+.settings-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 18px; align-items: start; }
+.settings-tabs { display: grid; gap: 6px; }
+.settings-tabs button { display: flex; align-items: center; gap: 10px; padding: 12px 13px; border: 1px solid transparent; border-radius: 11px; background: transparent; color: #aaa2b2; font-size: 12px; text-align: left; }
+.settings-tabs button:hover { background: #ffffff05; color: #f5f1f6; }
+.settings-tabs button.active { background: #f16c8f13; color: #ffa1b9; border-color: #f16c8f1a; }
+.settings-panel { min-width: 0; background: #19161f; border: 1px solid #3b303e; border-radius: 17px; padding: 22px; box-shadow: 0 15px 45px #08060e25; }
+.settings-panel fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.settings-panel legend { font-size: 17px; font-weight: 600; letter-spacing: -.3px; margin-bottom: 18px; padding: 0; }
+.setting-card, .setting-group { background: #1e1923; border: 1px solid #3b303e; border-radius: 12px; padding: 15px 16px; margin-bottom: 12px; }
+.setting-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.setting-card > div { min-width: 0; }
+.setting-card strong, .setting-card label, .setting-group label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 9px; font-size: 13px; font-weight: 550; color: #f0e4ee; }
+.setting-card p, .setting-group p { color: #b6a8ba; font-size: 11px; line-height: 1.7; margin: 6px 0 0; }
+.setting-group select, .setting-group textarea { display: block; width: 100%; margin-top: 11px; background: #221b29; border: 1px solid #54405c; border-radius: 9px; color: #f5f1f6; font: inherit; font-size: 12px; padding: 10px 11px; }
+.setting-group textarea { resize: vertical; line-height: 1.6; }
+.setting-group select:focus-visible, .setting-group textarea:focus-visible, .setting-switch:focus-visible { outline: 2px solid #ed91ad; outline-offset: 2px; }
+.setting-group small { display: block; color: #918b9b; font-size: 9px; margin-top: 7px; }
+.is-soon { opacity: .72; }
+.is-soon select { cursor: not-allowed; }
+.soon-badge, .always-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 8px; font-weight: 650; letter-spacing: .8px; text-transform: uppercase; padding: 4px 7px; border-radius: 20px; color: #d8c4d4; background: #ffffff0a; border: 1px solid #ffffff12; }
+.always-badge { flex-shrink: 0; color: #bdd6b6; border-color: #bdd6b630; background: #bdd6b60c; }
+.setting-switch { appearance: none; flex-shrink: 0; width: 38px; height: 22px; margin: 0; border-radius: 22px; background: #2d2433; border: 1px solid #54405c; position: relative; }
+.setting-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #8b7a91; transition: transform .2s; }
+.setting-switch:checked { background: #e9a5bf; border-color: #e9a5bf; }
+.setting-switch:checked::after { transform: translateX(16px); background: #3c2333; }
+.setting-switch:disabled { cursor: not-allowed; }
+.settings-panel .social-notice { display: flex; align-items: center; gap: 7px; min-height: 8px; }
+.settings-panel .primary-button { margin-top: 6px; }
+.screen-time-reminder { display: flex; align-items: center; gap: 11px; margin: 0 0 22px; padding: 12px 15px; border: 1px solid #f16c8f30; background: #f16c8f0d; border-radius: 12px; color: #ffa1b9; }
+.screen-time-reminder p { flex: 1; margin: 0; font-size: 12px; line-height: 1.6; color: #eadce8; }
+.screen-time-reminder .text-button { font-size: 11px; flex-shrink: 0; }
+@media (max-width: 900px) { .settings-layout { grid-template-columns: 1fr; } .settings-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .settings-panel { padding: 17px 14px; border-radius: 14px; } .settings-tabs button { font-size: 11px; padding: 11px 10px; } .setting-card { align-items: flex-start; } .screen-time-reminder { flex-wrap: wrap; } }
 .social-shell { max-width: 1460px; margin: auto; display: grid; grid-template-columns: 240px minmax(0, 680px) 300px; justify-content: center; gap: 38px; padding: 0 28px; min-height: 100svh; }
 .social-shell .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 11px 15px; }
 .social-sidebar { position: sticky; top: 0; height: 100svh; display: flex; flex-direction: column; padding: 37px 0 24px; }
@@ -243,7 +277,7 @@
   .social-shell { display: block; padding: 0 17px 76px; }
   .social-sidebar { position: fixed; top: auto; bottom: 0; left: 0; width: 100%; height: auto; background: #17131df5; backdrop-filter: blur(15px); padding: 7px 8px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid #3b303e; z-index: 20; }
   .social-sidebar > .brand, .sidebar-caption, .sidebar-create, .sidebar-note, .sidebar-account { display: none !important; }
-  .social-sidebar nav { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
+  .social-sidebar nav { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
   .social-sidebar nav button { display: flex; flex-direction: column; gap: 5px; padding: 8px 2px; border-radius: 10px; font-size: 8px; }
   .social-sidebar nav button svg { width: 20px; height: 20px; }
   .social-main { padding-top: 25px; }

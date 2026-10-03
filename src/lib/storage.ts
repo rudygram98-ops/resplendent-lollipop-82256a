@@ -13,6 +13,6 @@ export function writeLocal(key: string, value: string) {
 
 export function clearLocalDrafts() {
   try {
-    Object.keys(window.localStorage).filter((key) => key.startsWith(`${prefix}draft:`)).forEach((key) => window.localStorage.removeItem(key))
+    Object.keys(window.localStorage).filter((key) => key.startsWith(`${prefix}draft:`) || key.startsWith(`${prefix}usage:`)).forEach((key) => window.localStorage.removeItem(key))
   } catch {}
 }
