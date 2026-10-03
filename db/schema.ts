@@ -1,4 +1,5 @@
-import { index, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { check, index, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 export const posts = pgTable('buzzly_posts', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -29,3 +30,39 @@ export const comments = pgTable('buzzly_comments', {
   content: text('content').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
 }, (table) => [index('buzzly_comments_post_idx').on(table.postId, table.createdAt)])
+
+export const members = pgTable('buzzly_members', {
+  userId: text('user_id').primaryKey(),
+  displayName: text('display_name').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+})
+
+export const follows = pgTable('buzzly_follows', {
+  followerId: text('follower_id').notNull().references(() => members.userId, { onDelete: 'cascade' }),
+  followingId: text('following_id').notNull().references(() => members.userId, { onDelete: 'cascade' }),
+}, (table) => [primaryKey({ columns: [table.followerId, table.followingId] }), check('buzzly_follows_not_self', sql`${table.followerId} <> ${table.followingId}`)])
+
+export const conversations = pgTable('buzzly_conversations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  memberOne: text('member_one').notNull().references(() => members.userId, { onDelete: 'cascade' }),
+  memberTwo: text('member_two').notNull().references(() => members.userId, { onDelete: 'cascade' }),
+  updatedAt: timestamp('updated_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('buzzly_conversations_pair_idx').on(table.memberOne, table.memberTwo),
+  index('buzzly_conversations_one_idx').on(table.memberOne, table.updatedAt, table.id),
+  index('buzzly_conversations_two_idx').on(table.memberTwo, table.updatedAt, table.id),
+  check('buzzly_conversations_ordered_pair', sql`${table.memberOne} < ${table.memberTwo}`),
+])
+
+export const directMessages = pgTable('buzzly_direct_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  conversationId: uuid('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  senderId: text('sender_id').notNull().references(() => members.userId, { onDelete: 'cascade' }),
+  clientId: uuid('client_id').notNull(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, (table) => [
+  index('buzzly_direct_messages_thread_idx').on(table.conversationId, table.createdAt, table.id),
+  uniqueIndex('buzzly_direct_messages_retry_idx').on(table.senderId, table.clientId),
+  check('buzzly_direct_messages_content_length', sql`char_length(${table.content}) between 1 and 2000`),
+])

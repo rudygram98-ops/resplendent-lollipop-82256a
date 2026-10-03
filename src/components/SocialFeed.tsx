@@ -9,6 +9,8 @@ import {
 import { initials, socialRequest } from '@/lib/social'
 import { readLocal, writeLocal } from '@/lib/storage'
 import type { FeedView, SocialComment, SocialPost } from '@/lib/social'
+import DirectMessaging from '@/components/DirectMessaging'
+import { messagingRequest } from '@/lib/messaging'
 
 type FeedPage = { posts: SocialPost[]; nextCursor: string | null }
 type CommentPage = { comments: SocialComment[]; nextCursor: string | null }
@@ -128,6 +130,7 @@ function PostCard({ post, user, onChange, onDelete }: {
 
 export default function SocialFeed({ user, onAccount }: { user: User; onAccount: () => void }) {
   const [view, setView] = useState<FeedView>('all')
+  const [messagingOpen, setMessagingOpen] = useState(false)
   const [page, setPage] = useState<FeedPage>({ posts: [], nextCursor: null })
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -151,6 +154,12 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
   const name = user.name || 'Buzzly member'
 
   const draftKey = `draft:${user.id}`
+
+  useEffect(() => {
+    const controller = new AbortController()
+    void messagingRequest('/session', { method: 'POST', signal: controller.signal }).catch(() => undefined)
+    return () => controller.abort()
+  }, [user.id])
 
   useEffect(() => { setContent((current) => current || readLocal(draftKey)) }, [draftKey])
 
@@ -184,6 +193,7 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
   }, [view, query, refresh, ready, sharedPost])
 
   function selectView(next: FeedView) {
+    setMessagingOpen(false)
     setView(next)
     setSharedPost(null)
     setQuery('')
@@ -248,18 +258,20 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
       <a className="brand" href="/" aria-label="Buzzly home"><span className="brand-icon"><Zap size={24} fill="currentColor" /></span><span>buzzly<span className="brand-dot">.</span></span></a>
       <span className="sidebar-caption">YOUR EVERYDAY, CONNECTED</span>
       <nav aria-label="Community navigation">
-        <button className={view === 'all' ? 'selected' : ''} aria-current={view === 'all' ? 'page' : undefined} onClick={() => selectView('all')}><Home size={21} />Home feed</button>
-        <button className={view === 'photos' ? 'selected' : ''} aria-current={view === 'photos' ? 'page' : undefined} onClick={() => selectView('photos')}><ImagePlus size={21} />Moments<span className="nav-tag">PHOTOS</span></button>
-        <button className={view === 'clips' ? 'selected' : ''} aria-current={view === 'clips' ? 'page' : undefined} onClick={() => selectView('clips')}><Film size={21} />Clips</button>
-        <button className={view === 'saved' ? 'selected' : ''} aria-current={view === 'saved' ? 'page' : undefined} onClick={() => selectView('saved')}><Bookmark size={21} />Saved</button>
-        <button className={view === 'mine' ? 'selected' : ''} aria-current={view === 'mine' ? 'page' : undefined} onClick={() => selectView('mine')}><UserRound size={21} />My posts</button>
+        <button className={!messagingOpen && view === 'all' ? 'selected' : ''} aria-current={!messagingOpen && view === 'all' ? 'page' : undefined} onClick={() => selectView('all')}><Home size={21} />Home feed</button>
+        <button className={!messagingOpen && view === 'photos' ? 'selected' : ''} aria-current={!messagingOpen && view === 'photos' ? 'page' : undefined} onClick={() => selectView('photos')}><ImagePlus size={21} />Moments<span className="nav-tag">PHOTOS</span></button>
+        <button className={!messagingOpen && view === 'clips' ? 'selected' : ''} aria-current={!messagingOpen && view === 'clips' ? 'page' : undefined} onClick={() => selectView('clips')}><Film size={21} />Clips</button>
+        <button className={messagingOpen ? 'selected' : ''} aria-current={messagingOpen ? 'page' : undefined} onClick={() => setMessagingOpen(true)}><Send size={21} />Messages</button>
+        <button className={!messagingOpen && view === 'saved' ? 'selected' : ''} aria-current={!messagingOpen && view === 'saved' ? 'page' : undefined} onClick={() => selectView('saved')}><Bookmark size={21} />Saved</button>
+        <button className={!messagingOpen && view === 'mine' ? 'selected' : ''} aria-current={!messagingOpen && view === 'mine' ? 'page' : undefined} onClick={() => selectView('mine')}><UserRound size={21} />My posts</button>
       </nav>
-      <button className="primary-button sidebar-create" onClick={() => { composer.current?.scrollIntoView({ block: 'center' }); composer.current?.focus() }}><Plus size={20} />Create a post</button>
+      {!messagingOpen && <button className="primary-button sidebar-create" onClick={() => { composer.current?.scrollIntoView({ block: 'center' }); composer.current?.focus() }}><Plus size={20} />Create a post</button>}
       <div className="sidebar-note"><Sparkles size={20} /><p>A little less noise.<br /><strong>A lot more you.</strong></p></div>
       <button className="sidebar-account" onClick={onAccount}><span className="social-avatar">{initials(name)}</span><span><strong>{name}</strong><small>Account & settings</small></span><ArrowRight size={17} /></button>
     </aside>
 
     <main className="social-main">
+      {messagingOpen ? <DirectMessaging user={user} onAccount={onAccount} /> : <>
       <header className="feed-header"><div><span className="eyebrow"><span /> THE BUZZ STARTS HERE</span><h1>{heading}</h1><p>Your thoughts. Your moments. Your kind of people.</p></div><button className="icon-button mobile-account" onClick={onAccount} aria-label="Open account settings"><UserRound size={22} /></button></header>
       <form className="feed-search" role="search" onSubmit={(event) => { event.preventDefault(); setSharedPost(null); setQuery(queryInput.trim()); window.history.replaceState(null, '', '/') }}><Search size={18} /><label className="sr-only" htmlFor="feed-search">Search posts and people by name</label><input id="feed-search" value={queryInput} onChange={(event) => setQueryInput(event.target.value)} maxLength={100} placeholder="Find a thought, a moment, a name…" /><button type="submit">Search</button></form>
 
@@ -283,6 +295,7 @@ export default function SocialFeed({ user, onAccount }: { user: User; onAccount:
       {feedError && <div className="feed-failure" role="alert"><p>{feedError}</p><button className="secondary-button" onClick={() => page.posts.length ? void loadMore() : setRefresh((current) => current + 1)}>Try again<RefreshCw size={15} /></button></div>}
       {page.nextCursor && !loading && <button className="load-more secondary-button" disabled={loadingMore} onClick={() => void loadMore()}>{loadingMore ? 'Finding more moments…' : 'More from the community'}<ArrowDown size={16} /></button>}
       <footer className="feed-footer">You bring the moments. We keep them connected.</footer>
+      </>}
     </main>
 
     <aside className="social-right" aria-label="About the community"><div className="community-note"><span className="eyebrow">ONE SPACE. ALL OF YOU.</span><div className="note-orbit"><Zap size={32} fill="currentColor" /><Sparkles size={22} /></div><h2>Big thoughts.<br />Little moments.<br /><span>Real connections.</span></h2><p>A quick update, a camera-roll favorite, or a clip worth sharing. There’s room for it here.</p><span className="community-note-footer"><span />Made for your everyday</span></div><div className="community-guide"><h3>A good kind of social<Heart size={17} /></h3><p>Be kind. Give credit. Share only what’s yours to share.</p><p>Posts are visible to signed-in members. Saved posts stay in your private collection.</p><button onClick={onAccount}>Make yourself at home<ArrowUpRight size={16} /></button></div><div className="right-footer">BUZZLY · LESS NOISE, MORE YOU</div></aside>
