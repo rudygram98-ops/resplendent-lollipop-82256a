@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import type { User } from '@netlify/identity'
+import type { User } from '@/lib/auth'
 import {
   ArrowDown, ArrowRight, ArrowUpRight, Bookmark, Check, ChevronLeft, Film, Heart, Home,
   ImagePlus, MessageCircle, Plus, RefreshCw, Send, Settings, Share2, Sparkles,

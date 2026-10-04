@@ -1,5 +1,5 @@
 import type { Config, Context } from '@netlify/functions'
-import { getUser, verifyRequestOrigin } from '@netlify/identity'
+import { getSessionUser, verifyRequestOrigin } from '../../db/auth.js'
 import { and, desc, eq, isNull, lt, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDatabase } from '../../db/index.js'
@@ -12,7 +12,7 @@ function json(data: unknown, status = 200) {
 
 export default async (request: Request, context: Context) => {
   try {
-    const user = await getUser()
+    const user = await getSessionUser(request)
     if (!user) return json({ error: 'Sign in to see your notifications.' }, 401)
     const db = getDatabase()
     const { action } = context.params

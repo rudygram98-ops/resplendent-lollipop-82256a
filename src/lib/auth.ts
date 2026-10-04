@@ -1,32 +1,65 @@
-import { AuthError, MissingIdentityError } from '@netlify/identity'
+export interface User {
+  id: string
+  email: string
+  name: string
+  phone: string
+  bio: string
+  avatarUrl: string | null
+  avatarAlt: string
+  createdAt: string
+}
+
+export interface ProfileUpdate {
+  name: string
+  email: string
+  phone: string
+  bio: string
+  avatarUrl: string | null
+  avatarAlt: string
+  currentPassword?: string
+  newPassword?: string
+}
+
+export class AuthError extends Error {
+  constructor(message: string, public status: number) { super(message) }
+}
+
+async function authRequest(action: string, options: RequestInit = {}) {
+  let response: Response
+  try {
+    response = await fetch(`/api/auth/${action}`, { ...options, credentials: 'same-origin', headers: options.body ? { 'Content-Type': 'application/json' } : undefined })
+  } catch {
+    throw new AuthError('We couldn’t connect to account services. Please check your connection and try again.', 0)
+  }
+  const data = await response.json().catch(() => null) as { user?: User | null; error?: string } | null
+  if (!response.ok) throw new AuthError(data?.error || 'Account services are temporarily unavailable. Please try again shortly.', response.status)
+  return data?.user ?? null
+}
+
+export function getUser() {
+  return authRequest('session')
+}
+
+export async function signup(name: string, email: string, password: string) {
+  return await authRequest('signup', { method: 'POST', body: JSON.stringify({ name, email, password }) }) as User
+}
+
+export async function login(email: string, password: string) {
+  return await authRequest('login', { method: 'POST', body: JSON.stringify({ email, password }) }) as User
+}
+
+export async function logout() {
+  await authRequest('logout', { method: 'POST' })
+}
+
+export async function updateProfile(update: ProfileUpdate) {
+  return await authRequest('profile', { method: 'PUT', body: JSON.stringify(update) }) as User
+}
 
 export function authErrorMessage(error: unknown): string {
-  if (error instanceof MissingIdentityError) {
-    return 'Account services are not available yet. Please try again shortly.'
-  }
   if (error instanceof AuthError) {
-    const message = error.message.toLowerCase()
-    if (message.includes('confirm') || message.includes('verified')) {
-      return 'Please confirm your email using the link in your inbox before signing in.'
-    }
-    if (message.includes('already') || message.includes('registered')) {
-      return 'An account with this email already exists. Sign in or reset your password.'
-    }
-    if (error.status === 429 || message.includes('rate limit')) {
-      return 'A few too many attempts. Please wait a moment and try again.'
-    }
-    if (error.status === 401 || error.status === 400) {
-      return 'We couldn’t sign you in. Check your email and password and try again.'
-    }
-    if (error.status === 403) {
-      return 'This action is not available for your account. Please try again later.'
-    }
-    if (error.status === 404 || (error.status !== undefined && error.status >= 500)) {
-      return 'Account services are not available yet. Please try again shortly.'
-    }
-    if (error.status === 422) {
-      return 'Please check your details. Your email must be valid and your password must meet the requirements.'
-    }
+    if (error.status === 429) return 'A few too many attempts. Please wait a moment and try again.'
+    return error.message
   }
   return 'We couldn’t connect to account services. Please check your connection and try again.'
 }

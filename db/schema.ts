@@ -119,3 +119,23 @@ export const notifications = pgTable('buzzly_notifications', {
   index('buzzly_notifications_recipient_idx').on(table.recipientId, table.createdAt, table.id),
   check('buzzly_notifications_type', sql`${table.type} in ('follow_request', 'follow_accepted', 'tag', 'comment', 'like', 'remix', 'message')`),
 ])
+
+export const accounts = pgTable('buzzly_accounts', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull(),
+  passwordHash: text('password_hash').notNull(),
+  displayName: text('display_name').notNull(),
+  phone: text('phone').notNull().default(''),
+  bio: text('bio').notNull().default(''),
+  avatarUrl: text('avatar_url'),
+  avatarAlt: text('avatar_alt').notNull().default(''),
+  createdAt: timestamp('created_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, (table) => [uniqueIndex('buzzly_accounts_email_idx').on(table.email)])
+
+export const sessions = pgTable('buzzly_sessions', {
+  tokenHash: text('token_hash').primaryKey(),
+  accountId: text('account_id').notNull().references(() => accounts.id, { onDelete: 'cascade' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true, precision: 3 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+}, (table) => [index('buzzly_sessions_account_idx').on(table.accountId)])

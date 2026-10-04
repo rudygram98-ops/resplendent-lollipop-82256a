@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import type { User } from '@netlify/identity'
+import type { User } from '@/lib/auth'
 import { ArrowDown, ArrowLeft, Check, LockKeyhole, MessageCircle, Plus, RefreshCw, Search, Send, UserRound, UsersRound } from 'lucide-react'
 import { initials } from '@/lib/social'
 import { messageCursor, messagingRequest } from '@/lib/messaging'

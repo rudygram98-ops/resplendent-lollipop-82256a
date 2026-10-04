@@ -1,5 +1,5 @@
 import type { Config, Context } from '@netlify/functions'
-import { getUser, verifyRequestOrigin } from '@netlify/identity'
+import { getSessionUser, verifyRequestOrigin } from '../../db/auth.js'
 import { getStore } from '@netlify/blobs'
 
 const maxFileSize = 4 * 1024 * 1024
@@ -19,7 +19,7 @@ function matchesImage(bytes: Uint8Array, type: string) {
 
 export default async (request: Request, context: Context) => {
   try {
-    const user = await getUser()
+    const user = await getSessionUser(request)
     if (!user) return json({ error: 'Sign in to manage your profile photo.' }, 401)
     if (!['GET', 'POST', 'DELETE'].includes(request.method)) return json({ error: 'Method not allowed.' }, 405)
     if (request.method !== 'GET') {

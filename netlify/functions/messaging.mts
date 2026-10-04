@@ -1,5 +1,5 @@
 import type { Config, Context } from '@netlify/functions'
-import { getUser, verifyRequestOrigin } from '@netlify/identity'
+import { getSessionUser, verifyRequestOrigin } from '../../db/auth.js'
 import { and, asc, desc, eq, gt, ilike, lt, ne, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDatabase } from '../../db/index.js'
@@ -55,7 +55,7 @@ function parseCursor(value: string) {
 
 export default async (request: Request, context: Context) => {
   try {
-    const user = await getUser()
+    const user = await getSessionUser(request)
     if (!user) return json({ error: 'Sign in to use private messages.' }, 401)
     if (!['GET', 'POST', 'PUT'].includes(request.method)) return json({ error: 'Method not allowed.' }, 405)
     if (request.method !== 'GET') {

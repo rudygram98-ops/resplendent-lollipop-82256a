@@ -1,5 +1,5 @@
 import type { Config } from '@netlify/functions'
-import { getUser, verifyRequestOrigin } from '@netlify/identity'
+import { getSessionUser, verifyRequestOrigin } from '../../db/auth.js'
 import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDatabase } from '../../db/index.js'
@@ -35,7 +35,7 @@ async function readAll(db: ReturnType<typeof getDatabase>, userId: string) {
 
 export default async (request: Request) => {
   try {
-    const user = await getUser()
+    const user = await getSessionUser(request)
     if (!user) return json({ error: 'Sign in to manage your settings.' }, 401)
     const db = getDatabase()
     if (request.method === 'GET') return json(await readAll(db, user.id))

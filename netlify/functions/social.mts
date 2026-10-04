@@ -1,5 +1,5 @@
 import type { Config, Context } from '@netlify/functions'
-import { getUser, verifyRequestOrigin } from '@netlify/identity'
+import { getSessionUser, verifyRequestOrigin } from '../../db/auth.js'
 import { getStore } from '@netlify/blobs'
 import { and, desc, eq, ilike, inArray, lt, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
@@ -65,7 +65,7 @@ function parseJson<Value>(value: Value | string): Value {
 
 export default async (request: Request, context: Context) => {
   try {
-    const user = await getUser()
+    const user = await getSessionUser(request)
     if (!user) return json({ error: 'Sign in to join the conversation.' }, 401)
     if (!['GET', 'POST', 'PUT', 'DELETE'].includes(request.method)) return json({ error: 'Method not allowed.' }, 405)
     if (request.method !== 'GET') {
